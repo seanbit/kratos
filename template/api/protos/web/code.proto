@@ -1,0 +1,26 @@
+syntax                          = "proto3";
+
+package web;
+
+import "errors/errors.proto";
+
+// 多语言特定包名，用于源代码引用
+option go_package               = "github.com/carv-protocol/kratos-ddd/api/web;web";
+
+enum ErrorReason {
+  // 设置缺省错误码
+  option (errors.default_code) = 500;
+
+  _ = 0; // 占位符，避免第一个枚举值为0
+  INVALID_PARAMS = 400 [(errors.code) = 400];
+  CONTENT_MISSING = 10000 [(errors.code) = 400];
+
+  AUTH_LOGIN_EXPIRED = 10001 [(errors.code) = 401];
+  AUTH_LOGIN_TOKEN_INVALID = 10005 [(errors.code) = 401];
+  AUTH_BLOCK_CHAIN_TYPE_NOT_SUPPORT = 10002 [(errors.code) = 400];
+  AUTH_SIGNATURE_TEXT_INVALID = 10003 [(errors.code) = 400];
+  AUTH_SIGNATURE_TEXT_EXPIRED = 10004 [(errors.code) = 400];
+
+  USER_NOT_FOUND = 10101 [(errors.code) = 404];
+  USER_ALREADY_EXISTS = 10102 [(errors.code) = 404];
+}

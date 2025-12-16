@@ -1,0 +1,33 @@
+syntax                          = "proto3";
+
+package web;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+option go_package               = "github.com/carv-protocol/kratos-ddd/api/web;web";
+
+// The probe service definition.
+service Probe {
+  // for liveness probe
+  rpc healthy (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http)    = {
+      get: "/healthy"
+    };
+  }
+
+  // for readiness probe
+  // 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
+  // 避免从go struct到pb message的转换。
+  // 不过，还是建议使用pb来定义接口, 这样接口更易于维护
+  rpc ready (google.protobuf.Struct) returns (ReadinessProbeResponse) {
+    option (google.api.http)    = {
+      get: "/are/you/ready"
+    };
+  }
+}
+
+message ReadinessProbeResponse {
+  string status = 1;
+}

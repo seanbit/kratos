@@ -1,0 +1,18 @@
+syntax                          = "proto3";
+
+package event;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package               = "github.com/carv-protocol/kratos-ddd/api/event;event";
+
+// The event message for user login
+message UserLogin {
+  string auth_type = 1;
+  string user_id = 2;
+  string ip = 3;
+  string issue_token = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}

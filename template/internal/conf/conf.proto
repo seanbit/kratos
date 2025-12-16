@@ -1,0 +1,138 @@
+syntax = "proto3";
+package kratos.api;
+
+option go_package = "web/internal/conf;conf";
+
+import "google/protobuf/duration.proto";
+
+// 环境配置枚举
+enum Env {
+  // 本地调试
+  LOCAL = 0;
+  // 开发环境
+  DEV = 1;
+  // 测试环境
+  TEST = 2;
+  // 生产环境
+  PROD = 3;
+}
+
+enum LogLevel {
+    Debug = 0;
+    Info = 1;
+    Warn = 2;
+    Error = 3;
+    Fatal = 4;
+    Panic = 5;
+}
+
+message Bootstrap {
+  Server server = 1;
+  Data data = 2;
+  Env env = 3;
+  LogLevel log_level = 4;
+  string name = 5;
+  Sentry sentry = 6;
+  Tracing tracing = 7;
+  Alarm alarm = 8;
+  Auth auth = 9;
+  S3 s3 = 10;
+  GeoIp geo_ip = 11;
+}
+
+message Server {
+  message HTTP {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  message GRPC {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  message ASYNQ {
+    string redis_uri = 1;
+    map<string, int32> queues = 2;
+    int32 concurrency = 3;
+  }
+  HTTP http = 1;
+  GRPC grpc = 2;
+  ASYNQ asynq = 3;
+}
+
+message Data {
+  message Database {
+    string driver = 1;
+    repeated string slaves_dsn = 2;
+    string name = 3;
+    int32 max_open_connections = 4;
+    int32 max_idle_connections = 5;
+    google.protobuf.Duration conn_max_lifetime = 6;
+    google.protobuf.Duration conn_max_idle_time = 7;
+    string default_schema = 8;
+    int32 gorm_level = 9; // 4-info  3-warn
+    int32 slow_threshold = 10; // unit: millisecond
+  }
+  message Redis {
+    bool is_cluster = 1;
+    string addr = 2;
+    google.protobuf.Duration read_timeout = 3;
+    google.protobuf.Duration write_timeout = 4;
+    int32 db = 5;
+    string username = 6;
+    string password = 7;
+    uint32 pool_size = 8;
+    uint32 min_idle_conn = 9;
+    uint32 max_retry_times = 10;
+    google.protobuf.Duration idle_timeout = 11;
+  }
+  Database database = 1;
+  Redis redis = 2;
+}
+
+message Tracing {
+  string host = 1;
+  int32 port = 2;
+  string type = 3;
+}
+
+message Sentry {
+  string dsn = 1;
+  bool attach_stack_trace = 2;
+}
+
+message Alarm {
+  map<string, string> web_hooks = 1;
+  google.protobuf.Duration cache_ignore_duration = 2;
+  google.protobuf.Duration cache_fuse_duration = 3;
+  string default_platform = 4;
+  bool dry_run = 5;
+  int32 concurrency = 6;
+}
+
+message Auth {
+  string jwt_key_25519 = 1;
+  google.protobuf.Duration login_expires =2;
+}
+
+message Cos {
+  string secret_id = 1;
+  string secret_key = 2;
+  string region = 3;
+  string bucket = 4;
+  string host = 5;
+}
+
+message S3 {
+  string access_key = 1;
+  string secret_key = 2;
+  string region = 3;
+  string bucket = 4;
+  string host = 5;
+}
+
+message GeoIp {
+  string file_bucket = 1;
+  string file_key = 2;
+}

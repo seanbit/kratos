@@ -1,0 +1,55 @@
+syntax                          = "proto3";
+
+package web;
+
+import "buf/validate/validate.proto";
+import "validate/validate.proto";
+import "google/api/annotations.proto";
+import "constants.proto";
+
+option go_package               = "github.com/carv-protocol/kratos-ddd/api/web;web";
+
+// The auth service definition.
+service Auth {
+  // Login by web3 wallet
+  rpc LoginByWallet (LoginByWalletRequest) returns (LoginByWalletResponse) {
+    option (google.api.http) = {
+      post: "/auth/login/wallet"
+      body: "*"
+    };
+  }
+  // Get login signature text
+  rpc GetLoginSignatureText(GetLoginSignTextRequest) returns (GetLoginSignTextResponse) {
+    option (google.api.http) = {
+      get: "/auth/login/sign_text"
+    };
+  }
+}
+
+message GetLoginSignTextRequest {
+  // 区块链类型：1 evm/
+  BlockChainType blockchain_type = 1[(buf.validate.field).enum.defined_only = true];
+  // 钱包地址
+  string address = 2[(validate.rules).string.min_len = 32,(validate.rules).string.max_len = 64];
+}
+
+message GetLoginSignTextResponse {
+  string text = 1;
+}
+
+// The request message containing the user's name.
+message LoginByWalletRequest {
+  // 区块链类型：1 evm/
+  BlockChainType blockchain_type = 1[(buf.validate.field).enum.defined_only = true];
+  // 签名原文
+  string origin_text = 2[(validate.rules).string.min_len = 1,(validate.rules).string.max_len = 2048]; // origin text to signature
+  // 签名
+  string signature = 3[(validate.rules).string.min_len = 32,(validate.rules).string.max_len = 256]; // signature by web3 wallet
+  // 要验证的钱包地址
+  string address = 4[(validate.rules).string.min_len = 32,(validate.rules).string.max_len = 64]; // wallet address
+}
+
+// The response message containing the greetings
+message LoginByWalletResponse {
+  string token = 1;
+}

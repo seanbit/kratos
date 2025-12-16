@@ -1,0 +1,119 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /are/you/ready:
+        get:
+            tags:
+                - Probe
+            description: |-
+                for readiness probe
+                 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
+                 避免从go struct到pb message的转换。
+                 不过，还是建议使用pb来定义接口, 这样接口更易于维护
+            operationId: Probe_Ready
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/web.ReadinessProbeResponse'
+    /auth/login/sign_text:
+        get:
+            tags:
+                - Auth
+            description: Get login signature text
+            operationId: Auth_GetLoginSignatureText
+            parameters:
+                - name: blockchainType
+                  in: query
+                  description: 区块链类型：1 evm/
+                  schema:
+                    type: integer
+                    format: enum
+                - name: address
+                  in: query
+                  description: 钱包地址
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/web.GetLoginSignTextResponse'
+    /auth/login/wallet:
+        post:
+            tags:
+                - Auth
+            description: Login by web3 wallet
+            operationId: Auth_LoginByWallet
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/web.LoginByWalletRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/web.LoginByWalletResponse'
+    /healthy:
+        get:
+            tags:
+                - Probe
+            description: for liveness probe
+            operationId: Probe_Healthy
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+components:
+    schemas:
+        web.GetLoginSignTextResponse:
+            type: object
+            properties:
+                text:
+                    type: string
+        web.LoginByWalletRequest:
+            type: object
+            properties:
+                blockchainType:
+                    type: integer
+                    description: 区块链类型：1 evm/
+                    format: enum
+                originText:
+                    type: string
+                    description: 签名原文
+                signature:
+                    type: string
+                    description: 签名
+                address:
+                    type: string
+                    description: 要验证的钱包地址
+            description: The request message containing the user's name.
+        web.LoginByWalletResponse:
+            type: object
+            properties:
+                token:
+                    type: string
+            description: The response message containing the greetings
+        web.ReadinessProbeResponse:
+            type: object
+            properties:
+                status:
+                    type: string
+tags:
+    - name: Auth
+      description: The auth service definition.
+    - name: Probe
+      description: The probe service definition.

@@ -1,0 +1,56 @@
+env: LOCAL
+log_level: Debug
+service_name: web
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 15s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 15s
+  asynq:
+    redis_uri: redis://:${REDIS_PASSWORD}@192.168.31.201:6379/9
+    concurrency: 15
+data:
+  database:
+    driver: "postgres"
+    name: "default"
+    max_open_connections: 20
+    max_idle_connections: 10
+    conn_max_lifetime: 360s
+    conn_max_idle_time: 180s
+    gorm_level: 3
+    slow_threshold: 200
+  redis:
+    addr: "192.168.31.201:6379"
+    db: 1
+    read_timeout: 2s
+    write_timeout: 2s
+    max_retry_times: 3
+    idle_timeout: 300s
+    pool_size: 60
+    min_idle_conn: 20
+    password: ${REDIS_PASSWORD}
+#tracing:
+#  host: "opentelemetry-collector.tempo.svc.cluster.local"
+#  port: "4317"
+#  type: "OTLP"
+alarm:
+  default_platform: "web"
+  web_hooks:
+    web: "https://open.larksuite.com/open-apis/bot/v2/hook/fdfb959e-e689-4c12-a5de-385073757176"
+  cache_ignore_duration: 43200s
+  cache_fuse_duration: 600s
+auth:
+  jwt_key_25519: ${JWT_KEY_25519}
+  login_expires: 86400s
+s3:
+  access_key: ${AWS_ACCESS_KEY}
+  secret_key: ${AWS_SECRET_KEY}
+  region: ap-northeast-1
+  bucket: carv-public-dev-tk
+  host: https://public-dev.carv.io
+geo_ip:
+  file_bucket: aifk-dev
+  file_key: geo_ip_country_common
+  local_mode: true

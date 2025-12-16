@@ -1,0 +1,8 @@
+syntax                          = "proto3";
+package web;
+option go_package               = "github.com/carv-protocol/kratos-ddd/api/web;web";
+
+enum BlockChainType {
+  _BLOCK_CHAIN_TYPE_NONE_ = 0;
+  BLOCK_CHAIN_TYPE_EVM = 1;
+}
