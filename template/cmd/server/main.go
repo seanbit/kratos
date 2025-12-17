@@ -10,6 +10,7 @@ import (
 	"github.com/seanbit/kratos/template/internal/global"
 	"github.com/seanbit/kratos/webkit"
 	"github.com/seanbit/kratos/webkit/transport/asynq"
+	"github.com/seanbit/kratos/webkit/transport/crontab"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/go-kratos/kratos/v2"
@@ -51,7 +52,7 @@ func init() {
 	}
 }
 
-func newApp(gs *grpc.Server, hs *http.Server, asynqs *asynq.Server) *kratos.App {
+func newApp(gs *grpc.Server, hs *http.Server, asynqs *asynq.Server, crontor *crontab.Executor) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
@@ -61,6 +62,7 @@ func newApp(gs *grpc.Server, hs *http.Server, asynqs *asynq.Server) *kratos.App 
 			gs,
 			hs,
 			asynqs,
+			crontor,
 		),
 		kratos.StopTimeout(time.Second*300),
 	)

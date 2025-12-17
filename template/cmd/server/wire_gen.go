@@ -11,11 +11,13 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/seanbit/kratos/template/internal/biz"
 	"github.com/seanbit/kratos/template/internal/conf"
+	"github.com/seanbit/kratos/template/internal/crontab"
 	"github.com/seanbit/kratos/template/internal/data"
 	"github.com/seanbit/kratos/template/internal/infra"
 	"github.com/seanbit/kratos/template/internal/server"
 	"github.com/seanbit/kratos/template/internal/server/middlewares"
 	"github.com/seanbit/kratos/template/internal/service"
+	crontab2 "github.com/seanbit/kratos/webkit/transport/crontab"
 )
 
 import (
@@ -59,7 +61,10 @@ func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *c
 	httpServer := server.NewHTTPServer(confServer, logger, httpBuilder, probeService, iAlarmRepo, authService)
 	eventHandlerServer := service.NewEventService(bizAuth)
 	asynqServer := server.NewAsynqServer(confServer, logger, eventHandlerServer)
-	app := newApp(grpcServer, httpServer, asynqServer)
+	jobTest := crontab.NewJobTest()
+	jobRegister := crontab.NewJobRegister(jobTest)
+	executor := crontab2.NewServer(jobRegister)
+	app := newApp(grpcServer, httpServer, asynqServer, executor)
 	return app, func() {
 		cleanup2()
 		cleanup()
