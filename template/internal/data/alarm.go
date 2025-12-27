@@ -35,6 +35,9 @@ type IAlarmMessageRepo interface {
 		cooldownTimes int, cacheIgnoreTime time.Duration) (isExceed bool, err error)
 	EnqueueMessage(ctx context.Context, msg *AlarmMessage) error
 	DequeueMessage(ctx context.Context) (*AlarmMessage, error)
+	// 延迟队列方法
+	EnqueueDelayedMessage(ctx context.Context, msg *AlarmMessage, delay time.Duration) error
+	ProcessDelayedMessages(ctx context.Context) error
 }
 
 type Alarm struct {
@@ -129,9 +132,36 @@ func (alarm *Alarm) SendMessage(ctx context.Context, platform, title, info strin
 
 // StartWorkerPool 启动工作池
 func (alarm *Alarm) StartWorkerPool() {
+	// 启动消息处理worker
 	for i := 0; i < alarm.workerNum; i++ {
 		alarm.wg.Add(1)
 		go alarm.worker(i)
+	}
+	// 启动延迟队列处理器
+	alarm.wg.Add(1)
+	go alarm.delayedQueueProcessor()
+}
+
+// delayedQueueProcessor 延迟队列处理器
+// 定期扫描延迟队列，将到期消息移入主队列
+func (alarm *Alarm) delayedQueueProcessor() {
+	defer alarm.wg.Done()
+
+	log.Context(alarm.ctx).Info("Delayed queue processor started")
+
+	ticker := time.NewTicker(time.Second) // 每秒检查一次延迟队列
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-alarm.ctx.Done():
+			log.Context(alarm.ctx).Info("Delayed queue processor stopped")
+			return
+		case <-ticker.C:
+			if err := alarm.messageRepo.ProcessDelayedMessages(alarm.ctx); err != nil {
+				log.Context(alarm.ctx).Errorf("Process delayed messages error: %v", err)
+			}
+		}
 	}
 }
 
@@ -175,7 +205,6 @@ func (alarm *Alarm) worker(id int) {
 
 // processMessage 处理消息
 func (alarm *Alarm) processMessage(msg *AlarmMessage) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -187,17 +216,25 @@ func (alarm *Alarm) processMessage(msg *AlarmMessage) {
 		// 重试逻辑
 		if msg.Retry < msg.MaxRetry {
 			msg.Retry++
-			log.Context(ctx).Infof("Retrying alarm message %s (attempt %d/%d)", msg.AlarmTextMessage.TraceId, msg.Retry, msg.MaxRetry)
+			// 使用指数退避策略计算延迟时间：1s, 2s, 4s, 8s...
+			retryDelay := time.Duration(1<<uint(msg.Retry-1)) * time.Second
+			if retryDelay > 30*time.Second {
+				retryDelay = 30 * time.Second // 最大延迟30秒
+			}
 
-			// 延迟重试
-			time.Sleep(time.Duration(msg.Retry) * time.Second)
-			if err := alarm.messageRepo.EnqueueMessage(ctx, msg); err != nil {
-				log.Context(ctx).Errorf("Failed to re-enqueue alarm message %s: %v", msg.AlarmTextMessage.TraceId, err)
+			log.Context(ctx).Infof("Scheduling alarm message %s retry (attempt %d/%d) after %v",
+				msg.AlarmTextMessage.TraceId, msg.Retry, msg.MaxRetry, retryDelay)
+
+			// 使用延迟队列，避免goroutine爆炸
+			if err := alarm.messageRepo.EnqueueDelayedMessage(ctx, msg, retryDelay); err != nil {
+				log.Context(ctx).Errorf("Failed to enqueue delayed alarm message %s: %v",
+					msg.AlarmTextMessage.TraceId, err)
 			}
 		} else {
-			log.Context(ctx).Infof("Alarm message %s reached max retry limit, giving up", msg.AlarmTextMessage.TraceId)
+			log.Context(ctx).Warnf("Alarm message %s reached max retry limit (%d), giving up",
+				msg.AlarmTextMessage.TraceId, msg.MaxRetry)
 		}
 	} else {
-		log.Context(ctx).Infof("Alarm messagee %s completed successfully", msg.AlarmTextMessage.TraceId)
+		log.Context(ctx).Infof("Alarm message %s completed successfully", msg.AlarmTextMessage.TraceId)
 	}
 }

@@ -188,3 +188,84 @@ func (repo *alarmMessageRepo) DequeueMessage(ctx context.Context) (*AlarmMessage
 	}
 	return &msg, nil
 }
+
+// delayQueueKey 延迟队列的Redis key
+func (repo *alarmMessageRepo) delayQueueKey() string {
+	return fmt.Sprintf("%s:alarm:message:delay_queue", global.GetServiceName())
+}
+
+// EnqueueDelayedMessage 将消息加入延迟队列
+// 使用Redis ZADD，score为消息应该被处理的时间戳
+func (repo *alarmMessageRepo) EnqueueDelayedMessage(ctx context.Context, msg *AlarmMessage, delay time.Duration) error {
+	taskData, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal delayed alarm message failed: %w", err)
+	}
+
+	executeAt := float64(time.Now().Add(delay).UnixMilli())
+	// 使用消息的TraceId+Retry作为member的一部分，避免重复消息被覆盖
+	member := fmt.Sprintf("%s:%d:%s", msg.AlarmTextMessage.TraceId, msg.Retry, string(taskData))
+
+	err = repo.rdbProvider.GetRedis().ZAdd(ctx, repo.delayQueueKey(), redis.Z{
+		Score:  executeAt,
+		Member: member,
+	}).Err()
+	if err != nil {
+		return fmt.Errorf("enqueue delayed message failed: %w", err)
+	}
+
+	return nil
+}
+
+// ProcessDelayedMessages 处理到期的延迟消息，将其移入主队列
+// 使用 ZRANGEBYSCORE 获取到期消息，然后 ZREM 删除并 LPUSH 到主队列
+func (repo *alarmMessageRepo) ProcessDelayedMessages(ctx context.Context) error {
+	now := float64(time.Now().UnixMilli())
+	delayKey := repo.delayQueueKey()
+	queueKey := fmt.Sprintf("%s:alarm:message:queue", global.GetServiceName())
+	rdb := repo.rdbProvider.GetRedis()
+
+	// 获取所有到期的消息（score <= now）
+	members, err := rdb.ZRangeByScore(ctx, delayKey, &redis.ZRangeBy{
+		Min:   "-inf",
+		Max:   fmt.Sprintf("%f", now),
+		Count: 100, // 每次最多处理100条，避免阻塞过久
+	}).Result()
+	if err != nil {
+		return fmt.Errorf("get delayed messages failed: %w", err)
+	}
+
+	if len(members) == 0 {
+		return nil
+	}
+
+	// 使用Pipeline批量处理
+	pipe := rdb.Pipeline()
+	for _, member := range members {
+		// 解析member获取消息JSON
+		// member格式: traceId:retry:jsonData
+		parts := strings.SplitN(member, ":", 3)
+		if len(parts) < 3 {
+			repo.log.Warnf("invalid delayed message format: %s", member)
+			pipe.ZRem(ctx, delayKey, member)
+			continue
+		}
+		msgJson := parts[2]
+
+		// 移入主队列
+		pipe.LPush(ctx, queueKey, msgJson)
+		// 从延迟队列删除
+		pipe.ZRem(ctx, delayKey, member)
+	}
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("process delayed messages pipeline failed: %w", err)
+	}
+
+	if len(members) > 0 {
+		repo.log.Infof("Processed %d delayed alarm messages", len(members))
+	}
+
+	return nil
+}
