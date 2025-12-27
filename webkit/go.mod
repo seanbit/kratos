@@ -1,6 +1,6 @@
 module github.com/seanbit/kratos/webkit
 
-go 1.24.9
+go 1.24.11
 
 require (
 	cosmossdk.io/errors v1.0.2

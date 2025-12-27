@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -32,7 +33,9 @@ var (
 
 	interceptRedisCli redis.UniversalClient
 
-	interceptConf *InterceptConfig
+	// interceptConf 使用 atomic.Value 保证并发安全
+	// 在 goroutine 中定期更新配置，在请求处理中读取配置
+	interceptConf atomic.Value // 存储 *InterceptConfig
 
 	interceptionKey string
 
@@ -93,7 +96,16 @@ func loadInterceptConfig(ctx context.Context) {
 		log.Errorf("unmarshal interception config failed:%v, data:%v", err, data)
 		return
 	}
-	interceptConf = &conf
+	// 使用原子操作存储配置，保证并发安全
+	interceptConf.Store(&conf)
+}
+
+// getInterceptConfig 安全地获取拦截配置
+func getInterceptConfig() *InterceptConfig {
+	if v := interceptConf.Load(); v != nil {
+		return v.(*InterceptConfig)
+	}
+	return nil
 }
 
 // TrafficInterceptMiddleware traffic interception middleware
@@ -179,15 +191,17 @@ func getInterceptStrategy(ctx context.Context, req *http.Request) error {
 	ua := req.Header.Get("User-Agent")
 	uid, _ := UserIdFromContext(ctx)
 
-	if interceptConf == nil || !interceptConf.Switch {
+	// 使用原子操作安全地获取配置
+	conf := getInterceptConfig()
+	if conf == nil || !conf.Switch {
 		return nil
 	}
 	// global rule
-	err := getStrategyByRadio(interceptConf.Radio)
+	err := getStrategyByRadio(conf.Radio)
 	if err != nil {
 		return err
 	}
-	for _, subRule := range interceptConf.SubRules {
+	for _, subRule := range conf.SubRules {
 		if !matchRule(subRule, path, referer, ua, uid) {
 			continue
 		}
