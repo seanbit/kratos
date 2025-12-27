@@ -2,6 +2,9 @@ package webkit
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -39,11 +42,31 @@ var (
 
 	interceptionKey string
 
-	// sign
-	signNum int   = 1
-	factor1 int64 = 1
-	factor2 int64 = 0
+	// 签名配置
+	signConfig atomic.Value // 存储 *SignConfig
 )
+
+// SignConfig 签名验证配置
+type SignConfig struct {
+	// Secret HMAC密钥，为空则禁用签名验证
+	Secret string
+	// SignatureLength 签名长度（hex字符数），默认8
+	SignatureLength int
+	// MaxTimeDrift 最大时间偏差（秒），防止重放攻击，默认300秒（5分钟）
+	MaxTimeDrift int64
+	// Enabled 是否启用签名验证
+	Enabled bool
+}
+
+// DefaultSignConfig 返回默认签名配置
+func DefaultSignConfig() *SignConfig {
+	return &SignConfig{
+		Secret:          "",
+		SignatureLength: 8,
+		MaxTimeDrift:    300,
+		Enabled:         false,
+	}
+}
 
 type InterceptConfig struct {
 	SubRules []SubRuleConfig `json:"sub_rules"`
@@ -58,15 +81,32 @@ type SubRuleConfig struct {
 	Radio int    `json:"radio"`
 }
 
-func InitInterceptConfig(serverName string, redis redis.UniversalClient) {
+// InitInterceptConfig 初始化流量拦截配置
+// serverName: 服务名称
+// redisCli: Redis客户端
+// signCfg: 签名配置，传nil使用默认配置（禁用签名验证）
+func InitInterceptConfig(serverName string, redisCli redis.UniversalClient, signCfg *SignConfig) {
 	once.Do(func() {
 		ctx := context.Background()
-		if redis == nil {
+		if redisCli == nil {
 			panic("init intercept redis client failed:invalid client")
 		}
 		currentServerName = serverName
 		interceptionKey = fmt.Sprintf(InterceptionKeyPrefix, serverName)
-		interceptRedisCli = redis
+		interceptRedisCli = redisCli
+
+		// 初始化签名配置
+		if signCfg == nil {
+			signCfg = DefaultSignConfig()
+		}
+		if signCfg.SignatureLength <= 0 {
+			signCfg.SignatureLength = 8
+		}
+		if signCfg.MaxTimeDrift <= 0 {
+			signCfg.MaxTimeDrift = 300
+		}
+		signConfig.Store(signCfg)
+
 		time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 		loadInterceptConfig(ctx)
 		go func() {
@@ -82,6 +122,28 @@ func InitInterceptConfig(serverName string, redis redis.UniversalClient) {
 			ticker.Stop()
 		}()
 	})
+}
+
+// UpdateSignConfig 动态更新签名配置
+func UpdateSignConfig(signCfg *SignConfig) {
+	if signCfg == nil {
+		return
+	}
+	if signCfg.SignatureLength <= 0 {
+		signCfg.SignatureLength = 8
+	}
+	if signCfg.MaxTimeDrift <= 0 {
+		signCfg.MaxTimeDrift = 300
+	}
+	signConfig.Store(signCfg)
+}
+
+// getSignConfig 安全地获取签名配置
+func getSignConfig() *SignConfig {
+	if v := signConfig.Load(); v != nil {
+		return v.(*SignConfig)
+	}
+	return DefaultSignConfig()
 }
 
 func loadInterceptConfig(ctx context.Context) {
@@ -148,26 +210,89 @@ func TrafficInterceptMiddleware() middleware.Middleware {
 	}
 }
 
+// verifySign 验证请求签名
+// 请求头格式: Request-Time: {timestamp}.{signature}
+// 其中 timestamp 为毫秒时间戳，signature 为 HMAC-SHA256(secret, timestamp) 的前N位hex
 func verifySign(ctx context.Context, requestTime string) bool {
-	if len(requestTime) < 13 {
+	cfg := getSignConfig()
+
+	// 未启用签名验证，直接返回true
+	if !cfg.Enabled || cfg.Secret == "" {
+		return true
+	}
+
+	// 解析 timestamp.signature 格式
+	parts := strings.SplitN(requestTime, ".", 2)
+	if len(parts) != 2 {
 		log.Context(ctx).Warnw(
+			"msg", "invalid request_time format, expected: timestamp.signature",
 			"request_time", requestTime,
-			"msg", "invalid request_time",
 		)
 		return false
 	}
-	pre := requestTime[0 : len(requestTime)-signNum]
-	preNum, _ := strconv.ParseInt(pre[len(pre)-signNum:], 10, 64)
-	tailNum, _ := strconv.ParseInt(requestTime[len(requestTime)-signNum:], 10, 64)
-	return (factor1*preNum+factor2)%pow(10, signNum) == tailNum
+
+	timestampStr := parts[0]
+	signature := parts[1]
+
+	// 验证时间戳格式
+	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+	if err != nil {
+		log.Context(ctx).Warnw(
+			"msg", "invalid timestamp",
+			"timestamp", timestampStr,
+		)
+		return false
+	}
+
+	// 检查时间偏差（防止重放攻击）
+	now := time.Now().UnixMilli()
+	drift := now - timestamp
+	if drift < 0 {
+		drift = -drift
+	}
+	maxDriftMs := cfg.MaxTimeDrift * 1000
+	if drift > maxDriftMs {
+		log.Context(ctx).Warnw(
+			"msg", "request_time drift too large",
+			"timestamp", timestamp,
+			"now", now,
+			"drift_ms", drift,
+			"max_drift_ms", maxDriftMs,
+		)
+		return false
+	}
+
+	// 验证 HMAC-SHA256 签名
+	expectedSig := generateSignature(timestampStr, cfg.Secret, cfg.SignatureLength)
+	if !hmac.Equal([]byte(signature), []byte(expectedSig)) {
+		log.Context(ctx).Warnw(
+			"msg", "signature mismatch",
+			"expected_length", cfg.SignatureLength,
+		)
+		return false
+	}
+
+	return true
 }
 
-func pow(b int64, p int) int64 {
-	var ret int64 = 1
-	for i := 0; i < p; i++ {
-		ret *= b
+// generateSignature 生成 HMAC-SHA256 签名
+// 返回签名的前 length 位十六进制字符
+func generateSignature(data, secret string, length int) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(data))
+	fullSig := hex.EncodeToString(h.Sum(nil))
+	if length > len(fullSig) {
+		length = len(fullSig)
 	}
-	return ret
+	return fullSig[:length]
+}
+
+// GenerateRequestTime 生成带签名的请求时间（供客户端使用）
+// 返回格式: {timestamp}.{signature}
+func GenerateRequestTime(secret string, signatureLength int) string {
+	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	signature := generateSignature(timestamp, secret, signatureLength)
+	return timestamp + "." + signature
 }
 
 func recordFeature(ctx context.Context, req *http.Request) {
