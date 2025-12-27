@@ -3,6 +3,7 @@ package webkit
 import (
 	"context"
 
+	"github.com/go-kratos/kratos/v2/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
@@ -212,22 +213,34 @@ func RecordAlarmStatsMetricWithCtx(ctx context.Context, serviceName, function st
 	)
 }
 
+// RecordPlatformMetric 记录平台告警指标
+// 注意：title 和 msg 仅用于日志记录，不作为 metrics 标签（避免高基数问题）
 func RecordPlatformMetric(level, platform, title, msg string) {
 	RecordPlatformMetricWithCtx(nil, level, platform, title, msg)
 }
+
 func RecordPlatformMetricWithCtx(ctx context.Context, level, platform, title, msg string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	// 只使用低基数标签：level 和 platform
+	// title 和 msg 为高基数字段，仅记录到日志，不作为 metrics 标签
 	_platformMetric.Add(
 		ctx,
 		1,
 		metric.WithAttributes(
 			attribute.String("level", level),
 			attribute.String("platform", platform),
-			attribute.String("title", title),
-			attribute.String("msg", msg),
 		),
+	)
+
+	// 详细信息记录到日志（可通过 traceId 关联）
+	log.Context(ctx).Infow(
+		"msg", "platform_alarm_recorded",
+		"level", level,
+		"platform", platform,
+		"title", title,
+		"alarm_msg", msg,
 	)
 }
 
