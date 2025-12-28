@@ -113,14 +113,14 @@ func InitInterceptConfig(serverName string, redisCli redis.UniversalClient, sign
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Errorf("relaod interception config panic:%v", r)
+					log.Errorf("reload interception config panic:%v", r)
 				}
 			}()
 			ticker := time.NewTicker(3 * time.Second)
+			defer ticker.Stop()
 			for range ticker.C {
 				loadInterceptConfig(ctx)
 			}
-			ticker.Stop()
 		}()
 	})
 }
@@ -150,13 +150,13 @@ func getSignConfig() *SignConfig {
 func loadInterceptConfig(ctx context.Context) {
 	data, err := interceptRedisCli.Get(ctx, interceptionKey).Result()
 	if err != nil {
-		log.Errorf("relaod interception config failed:%v", err)
+		log.Warnf("reload interception config failed:%v", err)
 		return
 	}
 	var conf InterceptConfig
 	err = json.Unmarshal([]byte(data), &conf)
 	if err != nil {
-		log.Errorf("unmarshal interception config failed:%v, data:%v", err, data)
+		log.Warnf("unmarshal interception config failed:%v, data:%v", err, data)
 		return
 	}
 	// 使用原子操作存储配置，保证并发安全
@@ -393,7 +393,7 @@ func getStrategyByRadio(radio int) error {
 	}
 	if radio > 0 && radio <= 100 {
 		if rand.Intn(200)%100 < radio {
-			return errors.New("invalid reqeust")
+			return errors.New("invalid request")
 		}
 	}
 	return nil

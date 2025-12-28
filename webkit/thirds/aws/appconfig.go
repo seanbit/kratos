@@ -99,9 +99,14 @@ func (a *awsConfigure) Next() ([]*kconfig.KeyValue, error) {
 		a.metaCnf.WatcherInterval = 90
 	}
 	t := time.NewTimer(time.Duration(a.metaCnf.WatcherInterval) * time.Second)
-	<-t.C
+	defer t.Stop()
 
-	return a.Load()
+	select {
+	case <-t.C:
+		return a.Load()
+	case <-a.ctx.Done():
+		return nil, nil
+	}
 }
 
 func (a *awsConfigure) Stop() error {

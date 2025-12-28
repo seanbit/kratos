@@ -137,5 +137,5 @@ func (p *postgresProvider) CheckDbConnectionProcess() {
 		}
 	}
 	stats := sqlDB.Stats()
-	log.Infof("OpenConnections: %+v", stats)
+	log.Debugf("OpenConnections: %+v", stats)
 }

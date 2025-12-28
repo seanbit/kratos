@@ -80,7 +80,7 @@ func newRedisClient(c *conf.Data_Redis) (*redis.Client, error) {
 	if minIdleConn <= 0 {
 		minIdleConn = redisDefaultMinIdleConn
 	}
-	maxRetries := c.GetPoolSize()
+	maxRetries := c.GetMaxRetryTimes()
 	if maxRetries <= 0 {
 		maxRetries = redisDefaultMaxRetries
 	}
@@ -128,7 +128,7 @@ func newRedisClusterClient(c *conf.Data_Redis) (*redis.ClusterClient, error) {
 	if minIdleConn <= 0 {
 		minIdleConn = redisDefaultMinIdleConn
 	}
-	maxRetries := c.GetPoolSize()
+	maxRetries := c.GetMaxRetryTimes()
 	if maxRetries <= 0 {
 		maxRetries = redisDefaultMaxRetries
 	}

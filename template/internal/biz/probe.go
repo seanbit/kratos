@@ -15,9 +15,10 @@ type HealthStatus struct {
 
 // ComponentHealth 组件健康状态
 type ComponentHealth struct {
-	Status  string `json:"status"`            // "healthy" or "unhealthy"
-	Latency string `json:"latency,omitempty"` // 响应时间
-	Error   string `json:"error,omitempty"`   // 错误信息
+	Status   string                 `json:"status"`              // "healthy" or "unhealthy"
+	Latency  string                 `json:"latency,omitempty"`   // 响应时间
+	Error    string                 `json:"error,omitempty"`     // 错误信息
+	StatsExt map[string]interface{} `json:"stats_ext,omitempty"` // 状态扩展
 }
 
 // IHealthRepo 健康检查仓库接口（由data层实现）

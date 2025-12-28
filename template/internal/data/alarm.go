@@ -222,7 +222,7 @@ func (alarm *Alarm) processMessage(msg *AlarmMessage) {
 				retryDelay = 30 * time.Second // 最大延迟30秒
 			}
 
-			log.Context(ctx).Infof("Scheduling alarm message %s retry (attempt %d/%d) after %v",
+			log.Context(ctx).Debugf("Scheduling alarm message %s retry (attempt %d/%d) after %v",
 				msg.AlarmTextMessage.TraceId, msg.Retry, msg.MaxRetry, retryDelay)
 
 			// 使用延迟队列，避免goroutine爆炸
@@ -235,6 +235,6 @@ func (alarm *Alarm) processMessage(msg *AlarmMessage) {
 				msg.AlarmTextMessage.TraceId, msg.MaxRetry)
 		}
 	} else {
-		log.Context(ctx).Infof("Alarm message %s completed successfully", msg.AlarmTextMessage.TraceId)
+		log.Context(ctx).Debugf("Alarm message %s completed successfully", msg.AlarmTextMessage.TraceId)
 	}
 }

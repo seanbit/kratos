@@ -64,6 +64,21 @@ func (r *HealthRepo) checkPostgres(ctx context.Context) *biz.ComponentHealth {
 	}
 
 	health.Latency = time.Since(start).String()
+
+	// 暴露数据库连接池状态
+	stats := db.Stats()
+	health.StatsExt = map[string]interface{}{
+		"max_open_connections": stats.MaxOpenConnections,
+		"open_connections":     stats.OpenConnections,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
+		"max_idle_time_closed": stats.MaxIdleTimeClosed,
+		"max_lifetime_closed":  stats.MaxLifetimeClosed,
+	}
+
 	return health
 }
 
@@ -72,12 +87,25 @@ func (r *HealthRepo) checkRedis(ctx context.Context) *biz.ComponentHealth {
 	health := &biz.ComponentHealth{Status: "healthy"}
 
 	start := time.Now()
-	if err := r.rdbProvider.GetRedis().Ping(ctx).Err(); err != nil {
+	rdb := r.rdbProvider.GetRedis()
+	if err := rdb.Ping(ctx).Err(); err != nil {
 		health.Status = "unhealthy"
 		health.Error = err.Error()
 		return health
 	}
 
 	health.Latency = time.Since(start).String()
+
+	// 暴露 Redis 连接池状态
+	poolStats := rdb.PoolStats()
+	health.StatsExt = map[string]interface{}{
+		"hits":        poolStats.Hits,
+		"misses":      poolStats.Misses,
+		"timeouts":    poolStats.Timeouts,
+		"total_conns": poolStats.TotalConns,
+		"idle_conns":  poolStats.IdleConns,
+		"stale_conns": poolStats.StaleConns,
+	}
+
 	return health
 }
