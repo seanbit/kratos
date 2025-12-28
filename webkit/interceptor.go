@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport"
-	"github.com/go-kratos/kratos/v2/transport/http"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/pkg/errors"
 
 	"github.com/go-kratos/kratos/v2/middleware"
@@ -181,7 +182,7 @@ func TrafficInterceptMiddleware() middleware.Middleware {
 			}()
 			// parse sign
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				if ht, ok := tr.(http.Transporter); ok {
+				if ht, ok := tr.(khttp.Transporter); ok {
 					path = ht.Request().URL.Path
 					requestTime := ht.Request().Header.Get("Request-Time")
 					if requestTime == "" {
@@ -295,6 +296,33 @@ func GenerateRequestTime(secret string, signatureLength int) string {
 	return timestamp + "." + signature
 }
 
+// sensitiveHeaders 敏感请求头列表（小写）
+var sensitiveHeaders = map[string]bool{
+	"authorization":       true,
+	"cookie":              true,
+	"set-cookie":          true,
+	"x-api-key":           true,
+	"x-auth-token":        true,
+	"x-access-token":      true,
+	"x-refresh-token":     true,
+	"proxy-authorization": true,
+	"www-authenticate":    true,
+}
+
+// sanitizeHeaders 过滤敏感请求头
+func sanitizeHeaders(headers http.Header) map[string]string {
+	sanitized := make(map[string]string, len(headers))
+	for key, values := range headers {
+		lowerKey := strings.ToLower(key)
+		if sensitiveHeaders[lowerKey] {
+			sanitized[key] = "***REDACTED***"
+		} else {
+			sanitized[key] = strings.Join(values, ", ")
+		}
+	}
+	return sanitized
+}
+
 func recordFeature(ctx context.Context, req *http.Request) {
 	path := req.URL.Path
 	referer := req.Header.Get("Referer")
@@ -306,7 +334,7 @@ func recordFeature(ctx context.Context, req *http.Request) {
 		"referer", referer,
 		"ua", ua,
 		"uid", uid,
-		"header", req.Header,
+		"header", sanitizeHeaders(req.Header),
 	)
 }
 
