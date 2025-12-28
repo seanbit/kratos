@@ -20,9 +20,12 @@ func NewProbeService(probeBiz *biz.Probe) *ProbeService {
 	return &ProbeService{probeBiz: probeBiz}
 }
 
+// Healthy 存活检查（Liveness）- 仅检查服务进程是否存活
 func (s *ProbeService) Healthy(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
+
+// Ready 就绪检查（Readiness）- 检查服务及其依赖是否就绪
 func (s *ProbeService) Ready(ctx context.Context, req *structpb.Struct) (*pb.ReadinessProbeResponse, error) {
 	bys, err := req.MarshalJSON()
 	if err != nil {
@@ -43,4 +46,21 @@ func (s *ProbeService) Ready(ctx context.Context, req *structpb.Struct) (*pb.Rea
 	}
 
 	return &pb.ReadinessProbeResponse{Status: "success"}, nil
+}
+
+// HealthStatus 获取详细健康状态（供监控使用）
+func (s *ProbeService) HealthStatus(ctx context.Context, req *emptypb.Empty) (*pb.HealthStatusResponse, error) {
+	status := s.probeBiz.CheckHealth(ctx)
+	resp := &pb.HealthStatusResponse{
+		Status:     status.Status,
+		Components: make(map[string]*pb.HealthStatusResponse_ComponentHealth, len(status.Components)),
+	}
+	for idx, component := range status.Components {
+		resp.Components[idx] = &pb.HealthStatusResponse_ComponentHealth{
+			Status:  component.Status,
+			Latency: component.Latency,
+			Error:   component.Error,
+		}
+	}
+	return resp, nil
 }

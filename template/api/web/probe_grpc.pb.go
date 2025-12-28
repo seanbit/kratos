@@ -21,8 +21,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Probe_Healthy_FullMethodName = "/web.Probe/healthy"
-	Probe_Ready_FullMethodName   = "/web.Probe/ready"
+	Probe_Healthy_FullMethodName      = "/web.Probe/healthy"
+	Probe_HealthStatus_FullMethodName = "/web.Probe/healthStatus"
+	Probe_Ready_FullMethodName        = "/web.Probe/ready"
 )
 
 // ProbeClient is the client API for Probe service.
@@ -33,6 +34,8 @@ const (
 type ProbeClient interface {
 	// for liveness probe
 	Healthy(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// for liveness probe
+	HealthStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HealthStatusResponse, error)
 	// for readiness probe
 	// 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
 	// 避免从go struct到pb message的转换。
@@ -58,6 +61,16 @@ func (c *probeClient) Healthy(ctx context.Context, in *emptypb.Empty, opts ...gr
 	return out, nil
 }
 
+func (c *probeClient) HealthStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HealthStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HealthStatusResponse)
+	err := c.cc.Invoke(ctx, Probe_HealthStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *probeClient) Ready(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*ReadinessProbeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReadinessProbeResponse)
@@ -76,6 +89,8 @@ func (c *probeClient) Ready(ctx context.Context, in *structpb.Struct, opts ...gr
 type ProbeServer interface {
 	// for liveness probe
 	Healthy(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// for liveness probe
+	HealthStatus(context.Context, *emptypb.Empty) (*HealthStatusResponse, error)
 	// for readiness probe
 	// 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
 	// 避免从go struct到pb message的转换。
@@ -93,6 +108,9 @@ type UnimplementedProbeServer struct{}
 
 func (UnimplementedProbeServer) Healthy(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Healthy not implemented")
+}
+func (UnimplementedProbeServer) HealthStatus(context.Context, *emptypb.Empty) (*HealthStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HealthStatus not implemented")
 }
 func (UnimplementedProbeServer) Ready(context.Context, *structpb.Struct) (*ReadinessProbeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ready not implemented")
@@ -136,6 +154,24 @@ func _Probe_Healthy_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Probe_HealthStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProbeServer).HealthStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Probe_HealthStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProbeServer).HealthStatus(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Probe_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(structpb.Struct)
 	if err := dec(in); err != nil {
@@ -164,6 +200,10 @@ var Probe_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "healthy",
 			Handler:    _Probe_Healthy_Handler,
+		},
+		{
+			MethodName: "healthStatus",
+			Handler:    _Probe_HealthStatus_Handler,
 		},
 		{
 			MethodName: "ready",

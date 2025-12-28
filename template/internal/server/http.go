@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,16 +17,16 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
-	"github.com/go-kratos/kratos/v2/transport/http"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/gorilla/handlers"
 )
 
 // NewHTTPServer new an HTTP server.
 func NewHTTPServer(c *conf.Server, logger log.Logger, middlewaresBuilder *middlewares.HttpBuilder,
 	probe *service.ProbeService, alarm biz.IAlarmRepo, auth *service.AuthService,
-) *http.Server {
-	var opts = []http.ServerOption{
-		http.Filter(handlers.CORS(
+) *khttp.Server {
+	var opts = []khttp.ServerOption{
+		khttp.Filter(handlers.CORS(
 			handlers.AllowedOriginValidator(func(origin string) bool {
 				// 这里可以添加更多的逻辑来决定是否允许这个origin
 				return true
@@ -51,17 +53,17 @@ func NewHTTPServer(c *conf.Server, logger log.Logger, middlewaresBuilder *middle
 			handlers.AllowCredentials(),
 			handlers.MaxAge(600),
 		)),
-		http.ResponseEncoder(webkit.ResponseEncoder),
-		http.ErrorEncoder(webkit.ErrorEncoder(web.ErrorReason_value)),
+		khttp.ResponseEncoder(webkit.ResponseEncoder),
+		khttp.ErrorEncoder(webkit.ErrorEncoder(web.ErrorReason_value)),
 	}
 	if c.Http.Network != "" {
-		opts = append(opts, http.Network(c.Http.Network))
+		opts = append(opts, khttp.Network(c.Http.Network))
 	}
 	if c.Http.Addr != "" {
-		opts = append(opts, http.Address(c.Http.Addr))
+		opts = append(opts, khttp.Address(c.Http.Addr))
 	}
 	if c.Http.Timeout != nil {
-		opts = append(opts, http.Timeout(c.Http.Timeout.AsDuration()))
+		opts = append(opts, khttp.Timeout(c.Http.Timeout.AsDuration()))
 	}
 
 	middlewareFns := webkit.PrepareMiddleWare()
@@ -75,12 +77,23 @@ func NewHTTPServer(c *conf.Server, logger log.Logger, middlewaresBuilder *middle
 	middlewareFns = append(middlewareFns,
 		middlewaresBuilder.Build()...,
 	)
-	opts = append(opts, http.Middleware(middlewareFns...))
+	opts = append(opts, khttp.Middleware(middlewareFns...))
 
-	srv := http.NewServer(opts...)
+	srv := khttp.NewServer(opts...)
 	web.RegisterProbeHTTPServer(srv, probe)
 	web.RegisterAuthHTTPServer(srv, auth)
 	srv.Handle("/metrics", promhttp.Handler())
+
+	// 注册健康检查端点（返回详细状态，供监控系统使用）
+	srv.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		status := probe.GetHealthStatus(r.Context())
+		w.Header().Set("Content-Type", "application/json")
+		if status.Status != "healthy" {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		_ = json.NewEncoder(w).Encode(status)
+	})
+
 	return srv
 }
 
@@ -88,7 +101,7 @@ func InjectContextMiddleware() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				if ht, ok := tr.(http.Transporter); ok {
+				if ht, ok := tr.(khttp.Transporter); ok {
 					path := ht.Request().URL.Path
 					ctx = webkit.CtxSetPath(ctx, path)
 				}

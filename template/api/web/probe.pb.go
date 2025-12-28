@@ -68,17 +68,142 @@ func (x *ReadinessProbeResponse) GetStatus() string {
 	return ""
 }
 
+type HealthStatusResponse struct {
+	state         protoimpl.MessageState                           `protogen:"open.v1"`
+	Status        string                                           `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` // "healthy" or "unhealthy"
+	Components    map[string]*HealthStatusResponse_ComponentHealth `protobuf:"bytes,2,rep,name=components,proto3" json:"components,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthStatusResponse) Reset() {
+	*x = HealthStatusResponse{}
+	mi := &file_probe_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthStatusResponse) ProtoMessage() {}
+
+func (x *HealthStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_probe_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthStatusResponse.ProtoReflect.Descriptor instead.
+func (*HealthStatusResponse) Descriptor() ([]byte, []int) {
+	return file_probe_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HealthStatusResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *HealthStatusResponse) GetComponents() map[string]*HealthStatusResponse_ComponentHealth {
+	if x != nil {
+		return x.Components
+	}
+	return nil
+}
+
+type HealthStatusResponse_ComponentHealth struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`   // "healthy" or "unhealthy"
+	Latency       string                 `protobuf:"bytes,2,opt,name=latency,proto3" json:"latency,omitempty"` // 响应时间
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`     // 错误信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthStatusResponse_ComponentHealth) Reset() {
+	*x = HealthStatusResponse_ComponentHealth{}
+	mi := &file_probe_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthStatusResponse_ComponentHealth) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthStatusResponse_ComponentHealth) ProtoMessage() {}
+
+func (x *HealthStatusResponse_ComponentHealth) ProtoReflect() protoreflect.Message {
+	mi := &file_probe_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthStatusResponse_ComponentHealth.ProtoReflect.Descriptor instead.
+func (*HealthStatusResponse_ComponentHealth) Descriptor() ([]byte, []int) {
+	return file_probe_proto_rawDescGZIP(), []int{1, 0}
+}
+
+func (x *HealthStatusResponse_ComponentHealth) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *HealthStatusResponse_ComponentHealth) GetLatency() string {
+	if x != nil {
+		return x.Latency
+	}
+	return ""
+}
+
+func (x *HealthStatusResponse_ComponentHealth) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_probe_proto protoreflect.FileDescriptor
 
 const file_probe_proto_rawDesc = "" +
 	"\n" +
 	"\vprobe.proto\x12\x03web\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\"0\n" +
 	"\x16ReadinessProbeResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2\xab\x01\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"\xbe\x02\n" +
+	"\x14HealthStatusResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12I\n" +
+	"\n" +
+	"components\x18\x02 \x03(\v2).web.HealthStatusResponse.ComponentsEntryR\n" +
+	"components\x1aY\n" +
+	"\x0fComponentHealth\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
+	"\alatency\x18\x02 \x01(\tR\alatency\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x1ah\n" +
+	"\x0fComponentsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12?\n" +
+	"\x05value\x18\x02 \x01(\v2).web.HealthStatusResponse.ComponentHealthR\x05value:\x028\x012\xff\x01\n" +
 	"\x05Probe\x12K\n" +
 	"\ahealthy\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x10\x82\xd3\xe4\x93\x02\n" +
-	"\x12\b/healthy\x12U\n" +
-	"\x05ready\x12\x17.google.protobuf.Struct\x1a\x1b.web.ReadinessProbeResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/are/you/readyB1Z/github.com/carv-protocol/kratos-ddd/api/web;webb\x06proto3"
+	"\x12\b/healthy\x12Z\n" +
+	"\fhealthStatus\x12\x16.google.protobuf.Empty\x1a\x19.web.HealthStatusResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/healthy/status\x12M\n" +
+	"\x05ready\x12\x17.google.protobuf.Struct\x1a\x1b.web.ReadinessProbeResponse\"\x0e\x82\xd3\xe4\x93\x02\b\x12\x06/readyB1Z/github.com/carv-protocol/kratos-ddd/api/web;webb\x06proto3"
 
 var (
 	file_probe_proto_rawDescOnce sync.Once
@@ -92,22 +217,29 @@ func file_probe_proto_rawDescGZIP() []byte {
 	return file_probe_proto_rawDescData
 }
 
-var file_probe_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_probe_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_probe_proto_goTypes = []any{
-	(*ReadinessProbeResponse)(nil), // 0: web.ReadinessProbeResponse
-	(*emptypb.Empty)(nil),          // 1: google.protobuf.Empty
-	(*structpb.Struct)(nil),        // 2: google.protobuf.Struct
+	(*ReadinessProbeResponse)(nil),               // 0: web.ReadinessProbeResponse
+	(*HealthStatusResponse)(nil),                 // 1: web.HealthStatusResponse
+	(*HealthStatusResponse_ComponentHealth)(nil), // 2: web.HealthStatusResponse.ComponentHealth
+	nil,                     // 3: web.HealthStatusResponse.ComponentsEntry
+	(*emptypb.Empty)(nil),   // 4: google.protobuf.Empty
+	(*structpb.Struct)(nil), // 5: google.protobuf.Struct
 }
 var file_probe_proto_depIdxs = []int32{
-	1, // 0: web.Probe.healthy:input_type -> google.protobuf.Empty
-	2, // 1: web.Probe.ready:input_type -> google.protobuf.Struct
-	1, // 2: web.Probe.healthy:output_type -> google.protobuf.Empty
-	0, // 3: web.Probe.ready:output_type -> web.ReadinessProbeResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	3, // 0: web.HealthStatusResponse.components:type_name -> web.HealthStatusResponse.ComponentsEntry
+	2, // 1: web.HealthStatusResponse.ComponentsEntry.value:type_name -> web.HealthStatusResponse.ComponentHealth
+	4, // 2: web.Probe.healthy:input_type -> google.protobuf.Empty
+	4, // 3: web.Probe.healthStatus:input_type -> google.protobuf.Empty
+	5, // 4: web.Probe.ready:input_type -> google.protobuf.Struct
+	4, // 5: web.Probe.healthy:output_type -> google.protobuf.Empty
+	1, // 6: web.Probe.healthStatus:output_type -> web.HealthStatusResponse
+	0, // 7: web.Probe.ready:output_type -> web.ReadinessProbeResponse
+	5, // [5:8] is the sub-list for method output_type
+	2, // [2:5] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_probe_proto_init() }
@@ -121,7 +253,7 @@ func file_probe_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_probe_proto_rawDesc), len(file_probe_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

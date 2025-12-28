@@ -6,23 +6,6 @@ info:
     title: ""
     version: 0.0.1
 paths:
-    /are/you/ready:
-        get:
-            tags:
-                - Probe
-            description: |-
-                for readiness probe
-                 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
-                 避免从go struct到pb message的转换。
-                 不过，还是建议使用pb来定义接口, 这样接口更易于维护
-            operationId: Probe_Ready
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/web.ReadinessProbeResponse'
     /auth/login/sign_text:
         get:
             tags:
@@ -77,12 +60,60 @@ paths:
                 "200":
                     description: OK
                     content: {}
+    /healthy/status:
+        get:
+            tags:
+                - Probe
+            description: for liveness probe
+            operationId: Probe_HealthStatus
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/web.HealthStatusResponse'
+    /ready:
+        get:
+            tags:
+                - Probe
+            description: |-
+                for readiness probe
+                 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
+                 避免从go struct到pb message的转换。
+                 不过，还是建议使用pb来定义接口, 这样接口更易于维护
+            operationId: Probe_Ready
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/web.ReadinessProbeResponse'
 components:
     schemas:
         web.GetLoginSignTextResponse:
             type: object
             properties:
                 text:
+                    type: string
+        web.HealthStatusResponse:
+            type: object
+            properties:
+                status:
+                    type: string
+                components:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/web.HealthStatusResponse_ComponentHealth'
+        web.HealthStatusResponse_ComponentHealth:
+            type: object
+            properties:
+                status:
+                    type: string
+                latency:
+                    type: string
+                error:
                     type: string
         web.LoginByWalletRequest:
             type: object

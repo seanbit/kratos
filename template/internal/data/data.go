@@ -9,4 +9,5 @@ var ProviderSet = wire.NewSet(
 	NewAlarmMessageRepo, NewAlarm,
 	NewAuthRepo, NewAuthLogRepo,
 	NewGeoIP,
+	NewHealthRepo,
 )
