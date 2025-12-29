@@ -50,21 +50,11 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/web.LoginByWalletResponse'
-    /healthy:
+    /health:
         get:
             tags:
                 - Probe
-            description: for liveness probe
-            operationId: Probe_Healthy
-            responses:
-                "200":
-                    description: OK
-                    content: {}
-    /healthy/status:
-        get:
-            tags:
-                - Probe
-            description: for liveness probe
+            description: for health detail probe
             operationId: Probe_HealthStatus
             responses:
                 "200":
@@ -73,7 +63,17 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/web.HealthStatusResponse'
-    /ready:
+    /health/live:
+        get:
+            tags:
+                - Probe
+            description: for liveness probe
+            operationId: Probe_HealthLive
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+    /health/ready:
         get:
             tags:
                 - Probe
@@ -82,7 +82,7 @@ paths:
                  这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
                  避免从go struct到pb message的转换。
                  不过，还是建议使用pb来定义接口, 这样接口更易于维护
-            operationId: Probe_Ready
+            operationId: Probe_HealthReady
             responses:
                 "200":
                     description: OK

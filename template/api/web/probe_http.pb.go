@@ -21,46 +21,27 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
+const OperationProbehealthLive = "/web.Probe/healthLive"
+const OperationProbehealthReady = "/web.Probe/healthReady"
 const OperationProbehealthStatus = "/web.Probe/healthStatus"
-const OperationProbehealthy = "/web.Probe/healthy"
-const OperationProbeready = "/web.Probe/ready"
 
 type ProbeHTTPServer interface {
-	// HealthStatus for liveness probe
-	HealthStatus(context.Context, *emptypb.Empty) (*HealthStatusResponse, error)
-	// Healthy for liveness probe
-	Healthy(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	// Ready for readiness probe
+	// HealthLive for liveness probe
+	HealthLive(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// HealthReady for readiness probe
 	// 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
 	// 避免从go struct到pb message的转换。
 	// 不过，还是建议使用pb来定义接口, 这样接口更易于维护
-	Ready(context.Context, *structpb.Struct) (*ReadinessProbeResponse, error)
+	HealthReady(context.Context, *structpb.Struct) (*ReadinessProbeResponse, error)
+	// HealthStatus for health detail probe
+	HealthStatus(context.Context, *emptypb.Empty) (*HealthStatusResponse, error)
 }
 
 func RegisterProbeHTTPServer(s *http.Server, srv ProbeHTTPServer) {
 	r := s.Route("/")
-	r.GET("/healthy", _Probe_Healthy0_HTTP_Handler(srv))
-	r.GET("/healthy/status", _Probe_HealthStatus0_HTTP_Handler(srv))
-	r.GET("/ready", _Probe_Ready0_HTTP_Handler(srv))
-}
-
-func _Probe_Healthy0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in emptypb.Empty
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationProbehealthy)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.Healthy(ctx, req.(*emptypb.Empty))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*emptypb.Empty)
-		return ctx.Result(200, reply)
-	}
+	r.GET("/health", _Probe_HealthStatus0_HTTP_Handler(srv))
+	r.GET("/health/live", _Probe_HealthLive0_HTTP_Handler(srv))
+	r.GET("/health/ready", _Probe_HealthReady0_HTTP_Handler(srv))
 }
 
 func _Probe_HealthStatus0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) error {
@@ -82,15 +63,34 @@ func _Probe_HealthStatus0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Contex
 	}
 }
 
-func _Probe_Ready0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) error {
+func _Probe_HealthLive0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in emptypb.Empty
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationProbehealthLive)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.HealthLive(ctx, req.(*emptypb.Empty))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*emptypb.Empty)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _Probe_HealthReady0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in structpb.Struct
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationProbeready)
+		http.SetOperation(ctx, OperationProbehealthReady)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.Ready(ctx, req.(*structpb.Struct))
+			return srv.HealthReady(ctx, req.(*structpb.Struct))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -102,15 +102,15 @@ func _Probe_Ready0_HTTP_Handler(srv ProbeHTTPServer) func(ctx http.Context) erro
 }
 
 type ProbeHTTPClient interface {
-	// HealthStatus for liveness probe
-	HealthStatus(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *HealthStatusResponse, err error)
-	// Healthy for liveness probe
-	Healthy(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
-	// Ready for readiness probe
+	// HealthLive for liveness probe
+	HealthLive(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
+	// HealthReady for readiness probe
 	// 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
 	// 避免从go struct到pb message的转换。
 	// 不过，还是建议使用pb来定义接口, 这样接口更易于维护
-	Ready(ctx context.Context, req *structpb.Struct, opts ...http.CallOption) (rsp *ReadinessProbeResponse, err error)
+	HealthReady(ctx context.Context, req *structpb.Struct, opts ...http.CallOption) (rsp *ReadinessProbeResponse, err error)
+	// HealthStatus for health detail probe
+	HealthStatus(ctx context.Context, req *emptypb.Empty, opts ...http.CallOption) (rsp *HealthStatusResponse, err error)
 }
 
 type ProbeHTTPClientImpl struct {
@@ -121,26 +121,12 @@ func NewProbeHTTPClient(client *http.Client) ProbeHTTPClient {
 	return &ProbeHTTPClientImpl{client}
 }
 
-// HealthStatus for liveness probe
-func (c *ProbeHTTPClientImpl) HealthStatus(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*HealthStatusResponse, error) {
-	var out HealthStatusResponse
-	pattern := "/healthy/status"
-	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationProbehealthStatus))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-// Healthy for liveness probe
-func (c *ProbeHTTPClientImpl) Healthy(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*emptypb.Empty, error) {
+// HealthLive for liveness probe
+func (c *ProbeHTTPClientImpl) HealthLive(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*emptypb.Empty, error) {
 	var out emptypb.Empty
-	pattern := "/healthy"
+	pattern := "/health/live"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationProbehealthy))
+	opts = append(opts, http.Operation(OperationProbehealthLive))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -149,15 +135,29 @@ func (c *ProbeHTTPClientImpl) Healthy(ctx context.Context, in *emptypb.Empty, op
 	return &out, nil
 }
 
-// Ready for readiness probe
+// HealthReady for readiness probe
 // 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
 // 避免从go struct到pb message的转换。
 // 不过，还是建议使用pb来定义接口, 这样接口更易于维护
-func (c *ProbeHTTPClientImpl) Ready(ctx context.Context, in *structpb.Struct, opts ...http.CallOption) (*ReadinessProbeResponse, error) {
+func (c *ProbeHTTPClientImpl) HealthReady(ctx context.Context, in *structpb.Struct, opts ...http.CallOption) (*ReadinessProbeResponse, error) {
 	var out ReadinessProbeResponse
-	pattern := "/ready"
+	pattern := "/health/ready"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationProbeready))
+	opts = append(opts, http.Operation(OperationProbehealthReady))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// HealthStatus for health detail probe
+func (c *ProbeHTTPClientImpl) HealthStatus(ctx context.Context, in *emptypb.Empty, opts ...http.CallOption) (*HealthStatusResponse, error) {
+	var out HealthStatusResponse
+	pattern := "/health"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationProbehealthStatus))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

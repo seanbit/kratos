@@ -57,6 +57,20 @@ func (mr *MockIAlarmMessageRepoMockRecorder) DequeueMessage(ctx any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DequeueMessage", reflect.TypeOf((*MockIAlarmMessageRepo)(nil).DequeueMessage), ctx)
 }
 
+// EnqueueDelayedMessage mocks base method.
+func (m *MockIAlarmMessageRepo) EnqueueDelayedMessage(ctx context.Context, msg *data.AlarmMessage, delay time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueDelayedMessage", ctx, msg, delay)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnqueueDelayedMessage indicates an expected call of EnqueueDelayedMessage.
+func (mr *MockIAlarmMessageRepoMockRecorder) EnqueueDelayedMessage(ctx, msg, delay any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueDelayedMessage", reflect.TypeOf((*MockIAlarmMessageRepo)(nil).EnqueueDelayedMessage), ctx, msg, delay)
+}
+
 // EnqueueMessage mocks base method.
 func (m *MockIAlarmMessageRepo) EnqueueMessage(ctx context.Context, msg *data.AlarmMessage) error {
 	m.ctrl.T.Helper()
@@ -128,4 +142,18 @@ func (m *MockIAlarmMessageRepo) IsMessageFusing(ctx context.Context, serviceName
 func (mr *MockIAlarmMessageRepoMockRecorder) IsMessageFusing(ctx, serviceName, message any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMessageFusing", reflect.TypeOf((*MockIAlarmMessageRepo)(nil).IsMessageFusing), ctx, serviceName, message)
+}
+
+// ProcessDelayedMessages mocks base method.
+func (m *MockIAlarmMessageRepo) ProcessDelayedMessages(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessDelayedMessages", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ProcessDelayedMessages indicates an expected call of ProcessDelayedMessages.
+func (mr *MockIAlarmMessageRepoMockRecorder) ProcessDelayedMessages(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessDelayedMessages", reflect.TypeOf((*MockIAlarmMessageRepo)(nil).ProcessDelayedMessages), ctx)
 }

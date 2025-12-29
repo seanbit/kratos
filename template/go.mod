@@ -19,7 +19,7 @@ require (
 	github.com/redis/go-redis/extra/redisotel/v9 v9.14.0
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/seanbit/kratos/webkit v1.0.1
+	github.com/seanbit/kratos/webkit v1.0.7
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shopspring/decimal v1.4.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.71

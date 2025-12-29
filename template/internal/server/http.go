@@ -2,8 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -83,16 +81,6 @@ func NewHTTPServer(c *conf.Server, logger log.Logger, middlewaresBuilder *middle
 	web.RegisterProbeHTTPServer(srv, probe)
 	web.RegisterAuthHTTPServer(srv, auth)
 	srv.Handle("/metrics", promhttp.Handler())
-
-	// 注册健康检查端点（返回详细状态，供监控系统使用）
-	srv.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		status := probe.GetHealthStatus(r.Context())
-		w.Header().Set("Content-Type", "application/json")
-		if status.Status != "healthy" {
-			w.WriteHeader(http.StatusServiceUnavailable)
-		}
-		_ = json.NewEncoder(w).Encode(status)
-	})
 
 	return srv
 }

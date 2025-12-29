@@ -198,12 +198,12 @@ const file_probe_proto_rawDesc = "" +
 	"\x05error\x18\x03 \x01(\tR\x05error\x1ah\n" +
 	"\x0fComponentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12?\n" +
-	"\x05value\x18\x02 \x01(\v2).web.HealthStatusResponse.ComponentHealthR\x05value:\x028\x012\xff\x01\n" +
-	"\x05Probe\x12K\n" +
-	"\ahealthy\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x10\x82\xd3\xe4\x93\x02\n" +
-	"\x12\b/healthy\x12Z\n" +
-	"\fhealthStatus\x12\x16.google.protobuf.Empty\x1a\x19.web.HealthStatusResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/healthy/status\x12M\n" +
-	"\x05ready\x12\x17.google.protobuf.Struct\x1a\x1b.web.ReadinessProbeResponse\"\x0e\x82\xd3\xe4\x93\x02\b\x12\x06/readyB1Z/github.com/carv-protocol/kratos-ddd/api/web;webb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2).web.HealthStatusResponse.ComponentHealthR\x05value:\x028\x012\x8b\x02\n" +
+	"\x05Probe\x12R\n" +
+	"\fhealthStatus\x12\x16.google.protobuf.Empty\x1a\x19.web.HealthStatusResponse\"\x0f\x82\xd3\xe4\x93\x02\t\x12\a/health\x12R\n" +
+	"\n" +
+	"healthLive\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x14\x82\xd3\xe4\x93\x02\x0e\x12\f/health/live\x12Z\n" +
+	"\vhealthReady\x12\x17.google.protobuf.Struct\x1a\x1b.web.ReadinessProbeResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/health/readyB1Z/github.com/carv-protocol/kratos-ddd/api/web;webb\x06proto3"
 
 var (
 	file_probe_proto_rawDescOnce sync.Once
@@ -229,12 +229,12 @@ var file_probe_proto_goTypes = []any{
 var file_probe_proto_depIdxs = []int32{
 	3, // 0: web.HealthStatusResponse.components:type_name -> web.HealthStatusResponse.ComponentsEntry
 	2, // 1: web.HealthStatusResponse.ComponentsEntry.value:type_name -> web.HealthStatusResponse.ComponentHealth
-	4, // 2: web.Probe.healthy:input_type -> google.protobuf.Empty
-	4, // 3: web.Probe.healthStatus:input_type -> google.protobuf.Empty
-	5, // 4: web.Probe.ready:input_type -> google.protobuf.Struct
-	4, // 5: web.Probe.healthy:output_type -> google.protobuf.Empty
-	1, // 6: web.Probe.healthStatus:output_type -> web.HealthStatusResponse
-	0, // 7: web.Probe.ready:output_type -> web.ReadinessProbeResponse
+	4, // 2: web.Probe.healthStatus:input_type -> google.protobuf.Empty
+	4, // 3: web.Probe.healthLive:input_type -> google.protobuf.Empty
+	5, // 4: web.Probe.healthReady:input_type -> google.protobuf.Struct
+	1, // 5: web.Probe.healthStatus:output_type -> web.HealthStatusResponse
+	4, // 6: web.Probe.healthLive:output_type -> google.protobuf.Empty
+	0, // 7: web.Probe.healthReady:output_type -> web.ReadinessProbeResponse
 	5, // [5:8] is the sub-list for method output_type
 	2, // [2:5] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

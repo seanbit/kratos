@@ -10,17 +10,18 @@ option go_package               = "github.com/carv-protocol/kratos-ddd/api/web;w
 
 // The probe service definition.
 service Probe {
-  // for liveness probe
-  rpc healthy (google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (google.api.http)    = {
-      get: "/healthy"
-    };
-  }
 
-  // for liveness probe
+  // for health detail probe
   rpc healthStatus (google.protobuf.Empty) returns (HealthStatusResponse) {
     option (google.api.http)    = {
-      get: "/healthy/status"
+      get: "/health"
+    };
+  }
+  
+  // for liveness probe
+  rpc healthLive (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http)    = {
+      get: "/health/live"
     };
   }
 
@@ -28,9 +29,9 @@ service Probe {
   // 这里示范使用 google.protobuf.Struct 从gin这样的web框架迁移代码直接重用原来的接口struct定义
   // 避免从go struct到pb message的转换。
   // 不过，还是建议使用pb来定义接口, 这样接口更易于维护
-  rpc ready (google.protobuf.Struct) returns (ReadinessProbeResponse) {
+  rpc healthReady (google.protobuf.Struct) returns (ReadinessProbeResponse) {
     option (google.api.http)    = {
-      get: "/ready"
+      get: "/health/ready"
     };
   }
 }

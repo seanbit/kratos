@@ -28,13 +28,14 @@ import (
 
 // wireApp init kratos application.
 func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *conf.GeoIp, alarm *conf.Alarm, auth *conf.Auth, logger log.Logger) (*kratos.App, func(), error) {
-	probe := biz.NewProbe()
-	probeService := service.NewProbeService(probe)
-	grpcServer := server.NewGRPCServer(confServer, probeService, logger)
 	dataProvider, cleanup, err := infra.NewDataProvider(confData)
 	if err != nil {
 		return nil, nil, err
 	}
+	iHealthRepo := data.NewHealthRepo(dataProvider, dataProvider, logger)
+	probe := biz.NewProbe(iHealthRepo)
+	probeService := service.NewProbeService(probe)
+	grpcServer := server.NewGRPCServer(confServer, probeService, logger)
 	iAuthRepo := data.NewAuthRepo(dataProvider, dataProvider)
 	client, err := server.NewAsynqClient(confServer)
 	if err != nil {

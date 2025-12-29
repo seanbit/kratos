@@ -20,13 +20,13 @@ func NewProbeService(probeBiz *biz.Probe) *ProbeService {
 	return &ProbeService{probeBiz: probeBiz}
 }
 
-// Healthy 存活检查（Liveness）- 仅检查服务进程是否存活
-func (s *ProbeService) Healthy(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+// HealthLive 存活检查（Liveness）- 仅检查服务进程是否存活
+func (s *ProbeService) HealthLive(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
 
-// Ready 就绪检查（Readiness）- 检查服务及其依赖是否就绪
-func (s *ProbeService) Ready(ctx context.Context, req *structpb.Struct) (*pb.ReadinessProbeResponse, error) {
+// HealthReady 就绪检查（Readiness）- 检查服务及其依赖是否就绪
+func (s *ProbeService) HealthReady(ctx context.Context, req *structpb.Struct) (*pb.ReadinessProbeResponse, error) {
 	bys, err := req.MarshalJSON()
 	if err != nil {
 		log.Context(ctx).Errorf("marshal to json failed; detail: %+v", err)
