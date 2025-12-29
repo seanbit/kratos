@@ -45,6 +45,9 @@ var (
 
 	// 签名配置
 	signConfig atomic.Value // 存储 *SignConfig
+
+	// interceptCancel 用于优雅关闭配置刷新 goroutine
+	interceptCancel context.CancelFunc
 )
 
 // SignConfig 签名验证配置
@@ -88,7 +91,6 @@ type SubRuleConfig struct {
 // signCfg: 签名配置，传nil使用默认配置（禁用签名验证）
 func InitInterceptConfig(serverName string, redisCli redis.UniversalClient, signCfg *SignConfig) {
 	once.Do(func() {
-		ctx := context.Background()
 		if redisCli == nil {
 			panic("init intercept redis client failed:invalid client")
 		}
@@ -108,6 +110,10 @@ func InitInterceptConfig(serverName string, redisCli redis.UniversalClient, sign
 		}
 		signConfig.Store(signCfg)
 
+		// 创建可取消的 context 用于控制 goroutine 生命周期
+		ctx, cancel := context.WithCancel(context.Background())
+		interceptCancel = cancel
+
 		time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 		loadInterceptConfig(ctx)
 		go func() {
@@ -118,11 +124,24 @@ func InitInterceptConfig(serverName string, redisCli redis.UniversalClient, sign
 			}()
 			ticker := time.NewTicker(3 * time.Second)
 			defer ticker.Stop()
-			for range ticker.C {
-				loadInterceptConfig(ctx)
+			for {
+				select {
+				case <-ctx.Done():
+					log.Info("intercept config reload goroutine stopped")
+					return
+				case <-ticker.C:
+					loadInterceptConfig(ctx)
+				}
 			}
 		}()
 	})
+}
+
+// StopInterceptConfig 停止配置刷新 goroutine（用于优雅关闭）
+func StopInterceptConfig() {
+	if interceptCancel != nil {
+		interceptCancel()
+	}
 }
 
 // UpdateSignConfig 动态更新签名配置

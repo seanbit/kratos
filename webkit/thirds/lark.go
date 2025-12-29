@@ -1,11 +1,8 @@
 package thirds
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 )
 
 // Alarm represents an alarm structure with necessary information.
@@ -104,22 +101,8 @@ func (a *Alarm) getLokiUrl(traceId string) string {
 	return lokiUrl
 }
 
-// PushToLark sends the alarm information to Lark.
+// pushToLark sends the alarm information to Lark.
 func (a *Alarm) pushToLark(requestBody interface{}) error {
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		return fmt.Errorf("json Marshal failed: %v", err)
-	}
-
-	resp, err := http.Post(a.LarkURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("http Post failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	} else {
-		return fmt.Errorf("http Post failed: %v", resp.Status)
-	}
+	_, err := PostJSON(a.LarkURL, requestBody)
+	return err
 }

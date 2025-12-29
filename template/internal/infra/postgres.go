@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"context"
 	"os"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,7 @@ type PostgresProvider interface {
 type postgresProvider struct {
 	db       *gorm.DB
 	cleaning *atomic.Bool
+	cancel   context.CancelFunc
 }
 
 func NewPostgresProvider(dbCnf *conf.Data_Database) (PostgresProvider, func(), error) {
@@ -85,11 +87,13 @@ func NewPostgresProvider(dbCnf *conf.Data_Database) (PostgresProvider, func(), e
 	sqlDB.SetConnMaxLifetime(dbCnf.ConnMaxLifetime.AsDuration())
 	sqlDB.SetConnMaxIdleTime(dbCnf.ConnMaxIdleTime.AsDuration())
 
+	ctx, cancel := context.WithCancel(context.Background())
 	provider := &postgresProvider{
 		db:       masterDB,
 		cleaning: &atomic.Bool{},
+		cancel:   cancel,
 	}
-	go provider.CheckDbConnection()
+	go provider.CheckDbConnection(ctx)
 	return provider, provider.Close, nil
 }
 
@@ -102,6 +106,12 @@ func (p *postgresProvider) Close() {
 		return
 	}
 	p.cleaning.Store(true)
+
+	// 停止健康检查 goroutine
+	if p.cancel != nil {
+		p.cancel()
+	}
+
 	sqlDB, err := p.GetDB().DB()
 	if err != nil {
 		log.Warnf("postgres Close error: get sql db error: %+v", err)
@@ -114,10 +124,18 @@ func (p *postgresProvider) Close() {
 	log.Info("postgres closed")
 }
 
-func (p *postgresProvider) CheckDbConnection() {
+func (p *postgresProvider) CheckDbConnection(ctx context.Context) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		p.CheckDbConnectionProcess()
-		time.Sleep(time.Second * 60)
+		select {
+		case <-ctx.Done():
+			log.Info("postgres health check goroutine stopped")
+			return
+		case <-ticker.C:
+			p.CheckDbConnectionProcess()
+		}
 	}
 }
 
