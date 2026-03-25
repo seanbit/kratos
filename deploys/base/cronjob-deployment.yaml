@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{APP_NAME}}-cronjob
+  labels:
+    app: {{APP_NAME}}-cronjob
+    app.kubernetes.io/name: cronjob
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{APP_NAME}}-cronjob
+  template:
+    metadata:
+      labels:
+        app: {{APP_NAME}}-cronjob
+        app.kubernetes.io/name: cronjob
+        app.kubernetes.io/component: scheduler
+        app.kubernetes.io/part-of: {{APP_NAME}}
+        logging: enabled
+      annotations:
+        promtail.io/collect: "true"
+        promtail.io/parser: "json"
+    spec:
+      containers:
+        - name: {{APP_NAME}}-cronjob
+          image: {{APP_NAME}}-cronjob
+          imagePullPolicy: Always
+          env:
+            - name: ENV_RUN_TYPE
+              value: "cronjob"
+            - name: ENV_JOB_NAME
+              value: ""
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secret
+              mountPath: /data/conf/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -f cronjob || exit 1"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: config
+          configMap:
+            name: {{APP_NAME}}-config
+        - name: secret
+          secret:
+            secretName: {{APP_NAME}}-secret
+      imagePullSecrets:
+        - name: harbor-secret

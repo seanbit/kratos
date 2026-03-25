@@ -1,0 +1,18 @@
+FROM alpine:3.18.3
+WORKDIR /app
+
+ARG RUN_TYPE
+ENV ENV_RUN_TYPE=${RUN_TYPE} \
+    SECRET_FILE=""
+
+RUN apk update && \
+    apk add --no-cache curl netcat-openbsd bind-tools
+
+# Copy pre-built binary from CI
+COPY --chmod=755 bin/ /app/
+
+EXPOSE 8000
+EXPOSE 9000
+VOLUME /data/conf
+
+CMD ["sh", "-c", "./${ENV_RUN_TYPE} -conf /data/conf ${SECRET_FILE:+-secret-file $SECRET_FILE}"]

@@ -1,6 +1,6 @@
-env: LOCAL
+env: DEV
 log_level: Debug
-service_name: web
+name: web
 server:
   http:
     addr: 0.0.0.0:8000
@@ -54,15 +54,31 @@ geo_ip:
   file_bucket: aifk-dev
   file_key: geo_ip_country_common
   local_mode: true
-# 定时任务配置
-cronjob:
-  jobs:
-    - name: "test"
-      spec: "* * * * * *" # 每分钟执行一次测试任务
-      # 默认启用，无需设置 disabled
-    # 添加更多定时任务...
-    # - name: "task-name"
-    #   spec: "0 0 * * *"       # cron 表达式
-    # - name: "disabled-task"
-    #   spec: "0 0 * * *"
-    #   disabled: true          # 显式禁用
+
+# 区块链配置
+blockchain:
+  rpc_urls:
+    - "https://bsc.blockpi.network/v1/rpc/b5457888e8486a4d609719185365d80a48cf69d1"
+    - "https://endpoints.omniatech.io/v1/bsc/mainnet/public"
+    - "https://bsc.api.pocket.network"
+    - "https://api.zan.top/bsc-mainnet"
+    - "https://bsc-mainnet.nodereal.io/v1/64a9df0874fb4a93b9d0a3849de012d3"
+  ws_urls:  # WebSocket节点列表（按优先级顺序，断连后依次尝试）
+    - "wss://bsc-rpc.publicnode.com"
+    - "wss://bsc-ws-node.nariox.org"
+    - "wss://bsc.drpc.org"
+  rpc_timeout: 30s
+  ws_timeout: 60s
+  max_retry: 3
+  retry_interval: 5s
+  max_connections: 50
+  delay_sure_blocks: 18
+
+# 扫描器配置
+scanner:
+  batch_block_size: 2000        # 每次查询2000个区块
+  concurrent_contracts: 50      # 同时扫描50个合约
+  poll_interval: 12s            # 每12秒检查一次新区块
+  max_logs_per_query: 10000     # 单次最多返回10000条日志
+  event_batch_size: 1000        # 每1000条事件批量写入一次
+  worker_pool_size: 10          # 10个工作协程

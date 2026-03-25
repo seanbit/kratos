@@ -10,5 +10,5 @@ func NewJobTest() *JobTest {
 }
 
 func (job *JobTest) Run() {
-	log.Debugf("job test run")
+	log.Infof("job test run")
 }

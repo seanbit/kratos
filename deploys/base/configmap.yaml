@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evm-scan-config
+  namespace: web3-analyse
+data:
+  config.yaml: |
+    # 此文件会被 overlay 中的 config.yaml 替换
+    # 请勿直接修改此文件
+    env: LOCAL
+    log_level: Debug
+    service_name: web

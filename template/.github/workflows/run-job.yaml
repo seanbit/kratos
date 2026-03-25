@@ -1,0 +1,147 @@
+name: Run K8s Job
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_name:
+        description: 'Job 名称'
+        required: true
+        type: choice
+        options:
+          - event-re-dispatch
+          # 新增 job 时在此添加选项
+      job_args:
+        description: |
+          Job 运行参数 (各 job 参数不同):
+          event-re-dispatch: --contract <addr> --from <block> --end <block> [--batch-size 10000] [--dry-run]
+        required: false
+        type: string
+        default: ''
+      environment:
+        description: '运行环境'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  HARBOR_REGISTRY: ${{ vars.HARBOR_REGISTRY }}
+  HARBOR_PROJECT: ${{ vars.HARBOR_PROJECT }}
+  APP_NAME: ${{ vars.APP_NAME }}
+
+jobs:
+  run-job:
+    # K8s 集群仅内网可达，必须使用内网 runner
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          ref: ${{ inputs.environment == 'prod' && 'main' || 'dev' }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+#      - name: Configure kubeconfig
+#        run: |
+#          mkdir -p ~/.kube
+#          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+#          chmod 600 ~/.kube/config
+
+      - name: Get latest image tag
+        id: image
+        run: |
+          cd deploys/overlays/${{ inputs.environment }}/images
+          IMAGE_TAG=$(grep -A2 "name: ${{ env.APP_NAME }}-job" kustomization.yaml | grep newTag | awk '{print $2}')
+          echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "=== 使用镜像标签: ${IMAGE_TAG}} ==="
+
+      - name: Prepare job manifest
+        run: |
+          echo "=== 准备 Job 配置 ==="
+          JOB_FILE="deploys/jobs/${{ inputs.job_name }}.yaml"
+
+          if [[ ! -f "${JOB_FILE}" ]]; then
+            echo "::error::Job 配置文件不存在: ${JOB_FILE}"
+            exit 1
+          fi
+
+          # 更新镜像
+          sed -i "s|image: ${{ env.APP_NAME }}-job|image: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}:${{ steps.image.outputs.tag }}|g" ${JOB_FILE}
+
+          # 根据环境添加 namePrefix (与 kustomize overlay 一致)
+          ENV_PREFIX="${{ inputs.environment }}-"
+          sed -i "s|name: ${{ env.APP_NAME }}-config|name: ${ENV_PREFIX}${{ env.APP_NAME }}-config|g" ${JOB_FILE}
+          sed -i "s|secretName: ${{ env.APP_NAME }}-secret|secretName: ${ENV_PREFIX}${{ env.APP_NAME }}-secret|g" ${JOB_FILE}
+
+          # 注入用户自定义参数
+          sed -i "s|{{JOB_ARGS}}|${{ inputs.job_args }}|g" ${JOB_FILE}
+
+          # 添加 run number 避免名称冲突
+          sed -i "s|name: ${{ env.APP_NAME }}-job-${{ inputs.job_name }}|name: ${{ env.APP_NAME }}-job-${{ inputs.job_name }}-${{ github.run_number }}|g" ${JOB_FILE}
+
+          echo "=== Job 配置内容 ==="
+          cat ${JOB_FILE}
+
+      - name: Apply job
+        run: |
+          echo "=== 创建 K8s Job ==="
+          kubectl apply -f deploys/jobs/${{ inputs.job_name }}.yaml
+
+      - name: Wait for job completion
+        run: |
+          echo "=== 等待 Job 完成 ==="
+          NAMESPACE="${{ vars.NAMESPACE }}"
+          JOB_NAME=$(kubectl get jobs -n ${NAMESPACE} -l ${{ env.APP_NAME }}/job-name=${{ inputs.job_name }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+          echo "Job 名称: ${JOB_NAME}"
+
+          # 轮询 Job 状态，同时检测 Complete 和 Failed (最多等待 30 分钟)
+          TIMEOUT=1800
+          ELAPSED=0
+          while true; do
+            COMPLETE=$(kubectl get job ${JOB_NAME} -n ${NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null)
+            FAILED=$(kubectl get job ${JOB_NAME} -n ${NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null)
+            if [[ "${COMPLETE}" == "True" ]]; then
+              echo "Job 已完成"
+              break
+            fi
+            if [[ "${FAILED}" == "True" ]]; then
+              echo "::warning::Job 已失败，提前退出等待"
+              break
+            fi
+            if [[ ${ELAPSED} -ge ${TIMEOUT} ]]; then
+              echo "::warning::等待超时 (${TIMEOUT}s)"
+              break
+            fi
+            sleep 10
+            ELAPSED=$((ELAPSED + 10))
+          done
+
+          COMPLETE_STATUS="${COMPLETE}"
+          echo "Job Complete 状态: ${COMPLETE_STATUS}"
+
+          # 输出日志
+          echo "=== Job 日志 ==="
+          POD_NAME=$(kubectl get pods -n ${NAMESPACE} -l batch.kubernetes.io/job-name=${JOB_NAME} -o jsonpath='{.items[0].metadata.name}')
+          kubectl logs ${POD_NAME} -n ${NAMESPACE}
+
+          if [[ "${COMPLETE_STATUS}" != "True" ]]; then
+            echo "::error::Job 执行失败"
+            exit 1
+          fi
+
+      - name: Job Summary
+        run: |
+          echo "============================================"
+          echo "           Job 执行完成"
+          echo "============================================"
+          echo ""
+          echo "Job 名称:     ${{ inputs.job_name }}"
+          echo "运行环境:     ${{ inputs.environment }}"
+          echo "Job 参数:     ${{ inputs.job_args }}"
+          echo "触发者:       ${{ github.actor }}"
+          echo ""
+          echo "============================================"

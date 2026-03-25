@@ -46,6 +46,7 @@ func (e *Executor) Start(ctx context.Context) error {
 		}
 		log.Infof("crontab.AddJob(%s) success:%d", job.Name(), entryId)
 	}
+	e.Cron.Start()
 	return nil
 }
 

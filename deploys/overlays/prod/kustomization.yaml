@@ -1,0 +1,62 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+- postgres-endpoints.yaml
+
+namePrefix: prod-
+
+# 环境标签
+labels:
+- pairs:
+    environment: prod
+  fields:
+  - path: metadata/labels
+    create: true
+  - path: spec/selector/matchLabels
+    create: true
+    group: apps
+    kind: Deployment
+  - path: spec/template/metadata/labels
+    create: true
+    group: apps
+    kind: Deployment
+  - path: spec/selector
+    create: false
+    version: v1
+    kind: Service
+
+# 从文件生成 ConfigMap (每次部署自动更新)
+configMapGenerator:
+- behavior: replace
+  files:
+  - config.yaml
+  name: {{APP_NAME}}-config
+
+# Secret 不自动更新，需要手动在 K8s 中配置
+# 如需使用文件方式，取消下面注释并创建 secret.yaml
+# secretGenerator:
+#   - name: {{APP_NAME}}-secret
+#     behavior: create
+#     files:
+#       - secret.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+# 镜像配置 (由 CI 自动更新，独立于 images/ 目录)
+components:
+- images
+
+# 资源补丁
+patches:
+- path: patches/namespace.yaml
+- path: patches/web-patch.yaml
+  target:
+    kind: Deployment
+    name: {{APP_NAME}}-web
+- path: patches/cronjob-patch.yaml
+  target:
+    kind: Deployment
+    name: {{APP_NAME}}-cronjob

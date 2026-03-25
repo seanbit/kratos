@@ -1,0 +1,12 @@
+# Prod 环境配置文件
+# 此文件由 CI 自动从 configs/config.yaml 复制更新
+env: PROD
+log_level: Info
+service_name: web
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 15s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 15s
