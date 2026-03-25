@@ -38,6 +38,7 @@ message Bootstrap {
   Auth auth = 9;
   S3 s3 = 10;
   GeoIp geo_ip = 11;
+  CronJob cronjob = 12;         // 定时任务配置
 }
 
 message Server {
@@ -135,4 +136,14 @@ message S3 {
 message GeoIp {
   string file_bucket = 1;
   string file_key = 2;
+}
+
+// 定时任务配置
+message CronJob {
+  repeated JobEntry jobs = 1;  // 任务列表
+  message JobEntry {
+    string name = 1;    // 任务名称
+    string spec = 2;    // cron 表达式
+    bool disabled = 3;  // 是否禁用，默认 false = 启用
+  }
 }

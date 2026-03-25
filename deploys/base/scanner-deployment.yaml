@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evm-scan-scanner
+  namespace: web3-analyse
+  labels:
+    app: evm-scan-scanner
+    app.kubernetes.io/name: scanner
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evm-scan-scanner
+  template:
+    metadata:
+      labels:
+        app: evm-scan-scanner
+        app.kubernetes.io/name: scanner
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: evm-scan
+        logging: enabled
+      annotations:
+        # Promtail 日志收集配置
+        promtail.io/collect: "true"
+        promtail.io/parser: "json"
+    spec:
+      containers:
+        - name: evm-scan-scanner
+          image: evm-scan-scanner
+          imagePullPolicy: Always
+          env:
+            - name: ENV_RUN_TYPE
+              value: "scanner"
+            - name: ENV_JOB_NAME
+              value: ""
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: config
+              mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secret
+              mountPath: /data/conf/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -f scanner || exit 1"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: config
+          configMap:
+            name: evm-scan-config
+        - name: secret
+          secret:
+            secretName: evm-scan-secret
+      imagePullSecrets:
+        - name: harbor-secret

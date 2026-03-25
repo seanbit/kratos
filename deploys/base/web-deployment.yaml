@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evm-scan-web
+  namespace: web3-analyse
+  labels:
+    app: evm-scan-web
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evm-scan-web
+  template:
+    metadata:
+      labels:
+        app: evm-scan-web
+        app.kubernetes.io/name: web
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: evm-scan
+        logging: enabled
+      annotations:
+        # Promtail 日志收集配置
+        promtail.io/collect: "true"
+        promtail.io/parser: "json"
+    spec:
+      containers:
+        - name: evm-scan-web
+          image: evm-scan-web
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: grpc
+              containerPort: 9000
+              protocol: TCP
+          env:
+            - name: ENV_RUN_TYPE
+              value: "web"
+            - name: ENV_JOB_NAME
+              value: ""
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secret
+              mountPath: /data/conf/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthy
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthy
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: config
+          configMap:
+            name: evm-scan-config
+        - name: secret
+          secret:
+            secretName: evm-scan-secret
+      imagePullSecrets:
+        - name: harbor-secret

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+images:
+- name: evm-scan-web
+  newName: harbor.sean.vip/coding/evm-scan
+  newTag: web-latest
+- name: evm-scan-scanner
+  newName: harbor.sean.vip/coding/evm-scan
+  newTag: scanner-latest
+- name: evm-scan-job
+  newName: harbor.sean.vip/coding/evm-scan
+  newTag: job-latest
+- name: evm-scan-cronjob
+  newName: harbor.sean.vip/coding/evm-scan
+  newTag: cronjob-latest

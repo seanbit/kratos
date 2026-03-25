@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+#  - configmap.yaml
+#  - secret.yaml
+resources:
+- namespace.yaml
+- web-deployment.yaml
+- web-service.yaml
+- scanner-deployment.yaml
+- cronjob-deployment.yaml
+- postgres-external.yaml
+
+# 通用标签
+
+configMapGenerator:
+- files:
+  - config.yaml
+  name: evm-scan-config
+generatorOptions:
+  disableNameSuffixHash: true
+
+## 镜像配置 (会被 overlay 覆盖)
+#images:
+#- name: evm-scan-web
+#  newName: harbor.sean.vip/coding/evm-scan
+#  newTag: latest
+#- name: evm-scan-scanner
+#  newName: harbor.sean.vip/coding/evm-scan
+#  newTag: latest
+#- name: evm-scan-job
+#  newName: harbor.sean.vip/coding/evm-scan
+#  newTag: latest
+labels:
+- pairs:
+    app.kubernetes.io/part-of: evm-scan
+  fields:
+  - path: metadata/labels
+    create: true
+  - path: spec/selector/matchLabels
+    create: true
+    group: apps
+    kind: Deployment
+  - path: spec/template/metadata/labels
+    create: true
+    group: apps
+    kind: Deployment
+  - path: spec/selector
+    create: false
+    version: v1
+    kind: Service

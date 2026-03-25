@@ -1,0 +1,75 @@
+# Job: event-re-dispatch
+# 功能: 从数据库查询事件并重新分发处理
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: evm-scan-job-event-re-dispatch
+  namespace: web3-analyse
+  labels:
+    app: evm-scan-job
+    evm-scan/job-name: "event-re-dispatch"
+    app.kubernetes.io/name: job
+    app.kubernetes.io/component: job
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: evm-scan-job
+        evm-scan/job-name: "event-re-dispatch"
+        app.kubernetes.io/name: job
+        app.kubernetes.io/component: job
+        app.kubernetes.io/part-of: evm-scan
+        logging: enabled
+      annotations:
+        # Promtail 日志收集配置
+        promtail.io/collect: "true"
+        promtail.io/parser: "json"
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: job
+          image: evm-scan-job
+          imagePullPolicy: Always
+          # command:
+          #   - "./job"
+          # args:
+          #   - "event-re-dispatch"
+          #   - "--config"
+          #   - "/data/conf/config.yaml"
+          #   - "--secret"
+          #   - "secret.yaml"
+          # 使用 shell wrapper 以支持 {{JOB_ARGS}} 占位符被 sed 替换后正确拆分参数
+          command: ["/bin/sh", "-c"]
+          args: ["./job event-re-dispatch --config /data/conf/config.yaml --secret secret.yaml {{JOB_ARGS}}"]
+          env:
+            - name: ENV_RUN_TYPE
+              value: "job"
+            - name: ENV_JOB_NAME
+              value: "event-re-dispatch"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secret
+              mountPath: /data/conf/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: evm-scan-config
+        - name: secret
+          secret:
+            secretName: evm-scan-secret
+      imagePullSecrets:
+        - name: harbor-secret

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evm-scan-cronjob
+  namespace: web3-analyse
+  labels:
+    app: evm-scan-cronjob
+    app.kubernetes.io/name: cronjob
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evm-scan-cronjob
+  template:
+    metadata:
+      labels:
+        app: evm-scan-cronjob
+        app.kubernetes.io/name: cronjob
+        app.kubernetes.io/component: scheduler
+        app.kubernetes.io/part-of: evm-scan
+        logging: enabled
+      annotations:
+        promtail.io/collect: "true"
+        promtail.io/parser: "json"
+    spec:
+      containers:
+        - name: evm-scan-cronjob
+          image: evm-scan-cronjob
+          imagePullPolicy: Always
+          env:
+            - name: ENV_RUN_TYPE
+              value: "cronjob"
+            - name: ENV_JOB_NAME
+              value: ""
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secret
+              mountPath: /data/conf/secret.yaml
+              subPath: secret.yaml
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep -f cronjob || exit 1"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: config
+          configMap:
+            name: evm-scan-config
+        - name: secret
+          secret:
+            secretName: evm-scan-secret
+      imagePullSecrets:
+        - name: harbor-secret
