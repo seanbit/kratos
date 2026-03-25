@@ -25,10 +25,11 @@ on:
         default: false
 
 env:
-  HARBOR_REGISTRY: harbor.sean.vip
-  HARBOR_PROJECT: coding/evm-scan
+  HARBOR_REGISTRY: ${{ vars.HARBOR_REGISTRY }}
+  HARBOR_PROJECT: ${{ vars.HARBOR_PROJECT }}
   GO_VERSION: "1.24"
-  APP_NAME: evm-scan
+  APP_NAME: ${{ vars.APP_NAME }}
+  GOPRIVATE: ${{ vars.GOPRIVATE }}
 
 jobs:
   # 代码检查 (可选)
@@ -50,8 +51,6 @@ jobs:
 
       - name: Configure Go for private repos
         run: git config --global url."https://${{ secrets.CI_GITHUB_TOKEN }}:x-oauth-basic@github.com".insteadOf "https://github.com"
-        env:
-          GOPRIVATE: github.com/carv-protocol
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -92,8 +91,6 @@ jobs:
 
       - name: Configure Go for private repos
         run: git config --global url."https://${{ secrets.CI_GITHUB_TOKEN }}:x-oauth-basic@github.com".insteadOf "https://github.com"
-        env:
-          GOPRIVATE: github.com/carv-protocol
 
       - name: Build binary
         run: |
@@ -128,7 +125,7 @@ jobs:
 
   # 内网加载镜像并推送到 Harbor
   push-to-harbor:
-    runs-on: [self-hosted, github-runner, coding-seanbit]
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS) }}
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     steps:
@@ -186,14 +183,7 @@ jobs:
 
           APP_TYPE="${{ inputs.app_type }}"
           IMAGE_TAG="${{ needs.build.outputs.image_tag }}"
-
-          if [[ "$APP_TYPE" == "job" ]]; then
-            IMAGE_NAME="evm-scan-job"
-          elif [[ "$APP_TYPE" == "cronjob" ]]; then
-            IMAGE_NAME="evm-scan-cronjob"
-          else
-            IMAGE_NAME="evm-scan-web"
-          fi
+          IMAGE_NAME="${{ env.APP_NAME }}-${APP_TYPE}"
 
           export IMAGE_NAME
           export NEW_TAG="$IMAGE_TAG"

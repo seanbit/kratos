@@ -26,13 +26,14 @@ on:
           - prod
 
 env:
-  HARBOR_REGISTRY: harbor.sean.vip
-  HARBOR_PROJECT: coding/evm-scan
+  HARBOR_REGISTRY: ${{ vars.HARBOR_REGISTRY }}
+  HARBOR_PROJECT: ${{ vars.HARBOR_PROJECT }}
+  APP_NAME: ${{ vars.APP_NAME }}
 
 jobs:
   run-job:
     # K8s 集群仅内网可达，必须使用内网 runner
-    runs-on: [self-hosted, github-runner, coding-seanbit]
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,14 +54,13 @@ jobs:
         id: image
         run: |
           cd deploys/overlays/${{ inputs.environment }}/images
-          IMAGE_TAG=$(grep -A2 "name: evm-scan-job" kustomization.yaml | grep newTag | awk '{print $2}')
+          IMAGE_TAG=$(grep -A2 "name: ${{ env.APP_NAME }}-job" kustomization.yaml | grep newTag | awk '{print $2}')
           echo "tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "=== 使用镜像标签: ${IMAGE_TAG} ==="
+          echo "=== 使用镜像标签: ${IMAGE_TAG}} ==="
 
       - name: Prepare job manifest
         run: |
           echo "=== 准备 Job 配置 ==="
-          NAMESPACE="web3-analyse"
           JOB_FILE="deploys/jobs/${{ inputs.job_name }}.yaml"
 
           if [[ ! -f "${JOB_FILE}" ]]; then
@@ -69,19 +69,18 @@ jobs:
           fi
 
           # 更新镜像
-          sed -i "s|image: evm-scan-job|image: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}:${{ steps.image.outputs.tag }}|g" ${JOB_FILE}
+          sed -i "s|image: ${{ env.APP_NAME }}-job|image: ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}:${{ steps.image.outputs.tag }}|g" ${JOB_FILE}
 
           # 根据环境添加 namePrefix (与 kustomize overlay 一致)
-          # 注意: harbor-secret 不经过 kustomize，无需加前缀
           ENV_PREFIX="${{ inputs.environment }}-"
-          sed -i "s|name: evm-scan-config|name: ${ENV_PREFIX}evm-scan-config|g" ${JOB_FILE}
-          sed -i "s|secretName: evm-scan-secret|secretName: ${ENV_PREFIX}evm-scan-secret|g" ${JOB_FILE}
+          sed -i "s|name: ${{ env.APP_NAME }}-config|name: ${ENV_PREFIX}${{ env.APP_NAME }}-config|g" ${JOB_FILE}
+          sed -i "s|secretName: ${{ env.APP_NAME }}-secret|secretName: ${ENV_PREFIX}${{ env.APP_NAME }}-secret|g" ${JOB_FILE}
 
           # 注入用户自定义参数
           sed -i "s|{{JOB_ARGS}}|${{ inputs.job_args }}|g" ${JOB_FILE}
 
           # 添加 run number 避免名称冲突
-          sed -i "s|name: evm-scan-job-${{ inputs.job_name }}|name: evm-scan-job-${{ inputs.job_name }}-${{ github.run_number }}|g" ${JOB_FILE}
+          sed -i "s|name: ${{ env.APP_NAME }}-job-${{ inputs.job_name }}|name: ${{ env.APP_NAME }}-job-${{ inputs.job_name }}-${{ github.run_number }}|g" ${JOB_FILE}
 
           echo "=== Job 配置内容 ==="
           cat ${JOB_FILE}
@@ -94,8 +93,8 @@ jobs:
       - name: Wait for job completion
         run: |
           echo "=== 等待 Job 完成 ==="
-          NAMESPACE="web3-analyse"
-          JOB_NAME=$(kubectl get jobs -n ${NAMESPACE} -l evm-scan/job-name=${{ inputs.job_name }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+          NAMESPACE="${{ vars.NAMESPACE }}"
+          JOB_NAME=$(kubectl get jobs -n ${NAMESPACE} -l ${{ env.APP_NAME }}/job-name=${{ inputs.job_name }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
 
           echo "Job 名称: ${JOB_NAME}"
 

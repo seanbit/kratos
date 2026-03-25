@@ -414,6 +414,7 @@ github.com/ryanuber/columnize v2.1.0+incompatible/go.mod h1:sm1tb6uqfes/u+d4ooFo
 github.com/schollz/closestmatch v2.1.0+incompatible/go.mod h1:RtP1ddjLong6gTkbtmuhtR2uUrrJOpYzYRvbcPAid+g=
 github.com/seanbit/kratos/webkit v1.0.7 h1:BOVsZz65uyZzr0mg7fwLkxCM0svPO4gg77HkCD9Ci8Q=
 github.com/seanbit/kratos/webkit v1.0.7/go.mod h1:fGt9EUmbEirlXlS1OGwFIkb0jiI+3u794RTahM4b94w=
+github.com/seanbit/kratos/webkit v1.0.8/go.mod h1:fGt9EUmbEirlXlS1OGwFIkb0jiI+3u794RTahM4b94w=
 github.com/segmentio/asm v1.2.0 h1:9BQrFxC+YOHJlTlHGkTrFWf59nbL3XnCoFLTwDCI7ys=
 github.com/segmentio/asm v1.2.0/go.mod h1:BqMnlJP91P8d+4ibuonYZw9mfnzI9HfxselHZr5aAcs=
 github.com/segmentio/ksuid v1.0.4 h1:sBo2BdShXjmcugAMwjugoGUdUV0pcxY5mW4xKRn3v4c=
