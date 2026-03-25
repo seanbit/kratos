@@ -18,13 +18,15 @@ var (
 	dryRun    bool
 )
 
-func init() {
-	// 注册 event-re-dispatch 的参数
-	// 这些参数会在 runCmd 执行时绑定
+type eventReDispatchJob struct{}
+
+func (j *eventReDispatchJob) Name() string  { return "event-re-dispatch" }
+func (j *eventReDispatchJob) Short() string { return "Re-dispatch events from database" }
+func (j *eventReDispatchJob) Long() string {
+	return "Query events from database and re-dispatch them to EventDispatcher for reprocessing"
 }
 
-// RegisterEventReDispatchFlags 注册命令行参数
-func RegisterEventReDispatchFlags(cmd *cobra.Command) {
+func (j *eventReDispatchJob) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&contract, "contract", "c", "", "Contract address (required)")
 	cmd.Flags().Uint64VarP(&fromBlock, "from", "f", 0, "Start block number (required)")
 	cmd.Flags().Uint64VarP(&endBlock, "end", "e", 0, "End block number (required)")
@@ -36,41 +38,36 @@ func RegisterEventReDispatchFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("end")
 }
 
-// RunEventReDispatch 执行事件重新分发任务
-func RunEventReDispatch(cmd *cobra.Command, app *jobs.App) error {
-	// 验证参数
+func (j *eventReDispatchJob) Run(app *jobs.App, cmd *cobra.Command, args []string) error {
 	if err := validateParams(); err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-
-	// 打印任务信息
 	printJobInfo()
 
-	// 执行任务
 	if dryRun {
 		fmt.Println("\n⚠️  DRY-RUN MODE: No data will be written to database\n")
 		return runDryMode(ctx, app)
-	} else {
-		fmt.Println("\n🚀 REAL MODE: Events will be re-dispatched and written to database\n")
-		return runRealMode(ctx, app)
 	}
+	fmt.Println("\n🚀 REAL MODE: Events will be re-dispatched and written to database\n")
+	return runRealMode(ctx, app)
+}
+
+func init() {
+	jobs.Register(&eventReDispatchJob{})
 }
 
 // validateParams 验证参数
 func validateParams() error {
-	// 验证合约地址
 	if !common.IsHexAddress(contract) {
 		return fmt.Errorf("invalid contract address: %s", contract)
 	}
 
-	// 验证区块范围
 	if fromBlock > endBlock {
 		return fmt.Errorf("from block (%d) must be <= end block (%d)", fromBlock, endBlock)
 	}
 
-	// 验证批量大小
 	if batchSize <= 0 {
 		return fmt.Errorf("batch size must be > 0, got: %d", batchSize)
 	}
@@ -109,22 +106,16 @@ func runDryMode(ctx context.Context, app *jobs.App) error {
 		to := min(from+uint64(batchSize)-1, endBlock)
 		currentBatch++
 
-		// 查询事件
 		events := make([]int, 100000)
-
 		totalEvents += len(events)
 
-		// 打印进度
 		printProgress(currentBatch, totalBatches, from, to, len(events), totalEvents, true)
 
-		// Dry-run: 仅验证事件可以被处理，不实际写入
 		for _, event := range events {
-			// 可以在这里添加验证逻辑
 			_ = event
 		}
 	}
 
-	// 完成
 	fmt.Println()
 	printSummary(totalEvents, true)
 	return nil
@@ -141,21 +132,16 @@ func runRealMode(ctx context.Context, app *jobs.App) error {
 		to := min(from+uint64(batchSize)-1, endBlock)
 		currentBatch++
 
-		// 查询事件
 		events := make([]int, 100000)
-
 		totalEvents += len(events)
 
-		// 打印进度
 		printProgress(currentBatch, totalBatches, from, to, len(events), totalEvents, false)
 
-		// 重新分发事件
-		for _ = range events {
+		for range events {
 			processedEvents++
 		}
 	}
 
-	// 完成
 	fmt.Println()
 	printSummary(processedEvents, false)
 	return nil
