@@ -3,11 +3,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: evm-scan-job-event-re-dispatch
-  namespace: web3-analyse
+  name: {{APP_NAME}}-job-event-re-dispatch
   labels:
-    app: evm-scan-job
-    evm-scan/job-name: "event-re-dispatch"
+    app: {{APP_NAME}}-job
+    {{APP_NAME}}/job-name: "event-re-dispatch"
     app.kubernetes.io/name: job
     app.kubernetes.io/component: job
 spec:
@@ -16,11 +15,11 @@ spec:
   template:
     metadata:
       labels:
-        app: evm-scan-job
-        evm-scan/job-name: "event-re-dispatch"
+        app: {{APP_NAME}}-job
+        {{APP_NAME}}/job-name: "event-re-dispatch"
         app.kubernetes.io/name: job
         app.kubernetes.io/component: job
-        app.kubernetes.io/part-of: evm-scan
+        app.kubernetes.io/part-of: {{APP_NAME}}
         logging: enabled
       annotations:
         # Promtail 日志收集配置
@@ -30,16 +29,8 @@ spec:
       restartPolicy: Never
       containers:
         - name: job
-          image: evm-scan-job
+          image: {{APP_NAME}}-job
           imagePullPolicy: Always
-          # command:
-          #   - "./job"
-          # args:
-          #   - "event-re-dispatch"
-          #   - "--config"
-          #   - "/data/conf/config.yaml"
-          #   - "--secret"
-          #   - "secret.yaml"
           # 使用 shell wrapper 以支持 {{JOB_ARGS}} 占位符被 sed 替换后正确拆分参数
           command: ["/bin/sh", "-c"]
           args: ["./job event-re-dispatch --config /data/conf/config.yaml --secret secret.yaml {{JOB_ARGS}}"]
@@ -67,9 +58,9 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: evm-scan-config
+            name: {{APP_NAME}}-config
         - name: secret
           secret:
-            secretName: evm-scan-secret
+            secretName: {{APP_NAME}}-secret
       imagePullSecrets:
         - name: harbor-secret

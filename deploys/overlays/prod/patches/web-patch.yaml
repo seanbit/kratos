@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: evm-scan-web
+  name: {{APP_NAME}}-web
 spec:
   replicas: 2
   template:
     spec:
       containers:
-        - name: evm-scan-web
+        - name: {{APP_NAME}}-web
           resources:
             requests:
               cpu: "100m"

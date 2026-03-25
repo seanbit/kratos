@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: evm-scan-web
-  namespace: web3-analyse
+  name: {{APP_NAME}}-web
   labels:
-    app: evm-scan-web
+    app: {{APP_NAME}}-web
 spec:
   type: ClusterIP
   ports:
@@ -17,4 +16,4 @@ spec:
       targetPort: 9000
       protocol: TCP
   selector:
-    app: evm-scan-web
+    app: {{APP_NAME}}-web

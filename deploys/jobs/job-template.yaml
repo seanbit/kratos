@@ -11,11 +11,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: evm-scan-job-{{JOB_NAME}}
-  namespace: web3-analyse
+  name: {{APP_NAME}}-job-{{JOB_NAME}}
   labels:
-    app: evm-scan-job
-    evm-scan/job-name: "{{JOB_NAME}}"
+    app: {{APP_NAME}}-job
+    {{APP_NAME}}/job-name: "{{JOB_NAME}}"
     app.kubernetes.io/name: job
     app.kubernetes.io/component: job
 spec:
@@ -26,11 +25,11 @@ spec:
   template:
     metadata:
       labels:
-        app: evm-scan-job
-        evm-scan/job-name: "{{JOB_NAME}}"
+        app: {{APP_NAME}}-job
+        {{APP_NAME}}/job-name: "{{JOB_NAME}}"
         app.kubernetes.io/name: job
         app.kubernetes.io/component: job
-        app.kubernetes.io/part-of: evm-scan
+        app.kubernetes.io/part-of: {{APP_NAME}}
         logging: enabled
       annotations:
         # Promtail 日志收集配置
@@ -40,7 +39,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: job
-          image: evm-scan-job
+          image: {{APP_NAME}}-job
           imagePullPolicy: Always
           # command:
           #   - "./job"
@@ -77,9 +76,9 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: evm-scan-config
+            name: {{APP_NAME}}-config
         - name: secret
           secret:
-            secretName: evm-scan-secret
+            secretName: {{APP_NAME}}-secret
       imagePullSecrets:
         - name: harbor-secret

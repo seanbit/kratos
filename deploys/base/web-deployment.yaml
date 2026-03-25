@@ -1,33 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: evm-scan-web
-  namespace: web3-analyse
+  name: {{APP_NAME}}-web
   labels:
-    app: evm-scan-web
+    app: {{APP_NAME}}-web
     app.kubernetes.io/name: web
     app.kubernetes.io/component: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: evm-scan-web
+      app: {{APP_NAME}}-web
   template:
     metadata:
       labels:
-        app: evm-scan-web
+        app: {{APP_NAME}}-web
         app.kubernetes.io/name: web
         app.kubernetes.io/component: api
-        app.kubernetes.io/part-of: evm-scan
+        app.kubernetes.io/part-of: {{APP_NAME}}
         logging: enabled
       annotations:
-        # Promtail 日志收集配置
         promtail.io/collect: "true"
         promtail.io/parser: "json"
     spec:
       containers:
-        - name: evm-scan-web
-          image: evm-scan-web
+        - name: {{APP_NAME}}-web
+          image: {{APP_NAME}}-web
           imagePullPolicy: Always
           ports:
             - name: http
@@ -76,9 +74,9 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: evm-scan-config
+            name: {{APP_NAME}}-config
         - name: secret
           secret:
-            secretName: evm-scan-secret
+            secretName: {{APP_NAME}}-secret
       imagePullSecrets:
         - name: harbor-secret

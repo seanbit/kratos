@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: evm-scan-cronjob
+  name: {{APP_NAME}}-cronjob
 spec:
   replicas: 1
   template:
     spec:
       containers:
-        - name: evm-scan-cronjob
+        - name: {{APP_NAME}}-cronjob
           resources:
             requests:
               cpu: "50m"

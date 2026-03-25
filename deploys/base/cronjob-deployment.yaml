@@ -1,32 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: evm-scan-cronjob
-  namespace: web3-analyse
+  name: {{APP_NAME}}-cronjob
   labels:
-    app: evm-scan-cronjob
+    app: {{APP_NAME}}-cronjob
     app.kubernetes.io/name: cronjob
     app.kubernetes.io/component: scheduler
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: evm-scan-cronjob
+      app: {{APP_NAME}}-cronjob
   template:
     metadata:
       labels:
-        app: evm-scan-cronjob
+        app: {{APP_NAME}}-cronjob
         app.kubernetes.io/name: cronjob
         app.kubernetes.io/component: scheduler
-        app.kubernetes.io/part-of: evm-scan
+        app.kubernetes.io/part-of: {{APP_NAME}}
         logging: enabled
       annotations:
         promtail.io/collect: "true"
         promtail.io/parser: "json"
     spec:
       containers:
-        - name: evm-scan-cronjob
-          image: evm-scan-cronjob
+        - name: {{APP_NAME}}-cronjob
+          image: {{APP_NAME}}-cronjob
           imagePullPolicy: Always
           env:
             - name: ENV_RUN_TYPE
@@ -62,9 +61,9 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: evm-scan-config
+            name: {{APP_NAME}}-config
         - name: secret
           secret:
-            secretName: evm-scan-secret
+            secretName: {{APP_NAME}}-secret
       imagePullSecrets:
         - name: harbor-secret
