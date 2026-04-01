@@ -12,10 +12,19 @@ template/
 │   │   └── event/          # Event/message protos
 │   ├── web/                # Generated Go code from web protos
 │   └── event/              # Generated Go code from event protos
-├── cmd/server/             # Application entry point
-│   ├── main.go             # Main function
-│   ├── wire.go             # Wire dependency injection definition
-│   └── wire_gen.go         # Wire generated code (auto-generated)
+├── cmd/
+│   ├── server/             # Application entry point
+│   │   ├── main.go             # Main function
+│   │   ├── wire.go             # Wire dependency injection definition
+│   │   └── wire_gen.go         # Wire generated code (auto-generated)
+│   └── job/                # One-off job runner (K8S Job via GitHub Action)
+│       ├── main.go             # Cobra root command + sub-command wiring
+│       ├── wire.go             # Wire dependency injection definition
+│       ├── wire_gen.go         # Wire generated code (auto-generated)
+│       └── jobs/               # Job definitions
+│           ├── job.go          # Job interface + auto-registration
+│           ├── app.go          # Dependency container (Wire-injected)
+│           └── example/        # Example job (reference implementation)
 ├── configs/                # Configuration files (YAML)
 ├── internal/               # Business code (DDD layers)
 │   ├── biz/                # Domain layer (entities, use cases, interfaces)

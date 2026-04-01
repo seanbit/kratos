@@ -7,48 +7,25 @@
 package main
 
 import (
-	"evm-scan/cmd/job/jobs"
-	"evm-scan/internal/biz"
-	"evm-scan/internal/biz/processor"
-	"evm-scan/internal/conf"
-	"evm-scan/internal/data"
-	"evm-scan/internal/infra"
 	"github.com/go-kratos/kratos/v2/log"
+
+	"github.com/seanbit/kratos/template/cmd/job/jobs"
+	"github.com/seanbit/kratos/template/internal/conf"
 )
 
 // Injectors from wire.go:
 
 // initApp 初始化应用依赖
-func initApp(server *conf.Server, confData *conf.Data, blockchain *conf.Blockchain, scanner *conf.Scanner, logger log.Logger) (*jobs.App, func(), error) {
-	dataProvider, cleanup, err := infra.NewDataProvider(confData)
-	if err != nil {
-		return nil, nil, err
-	}
-	iEventRepo := data.NewEventRepo(dataProvider, logger)
-	iErc20TransferRepo := data.NewErc20TransferRepo(dataProvider, logger)
-	iErc20BalanceRepo := data.NewErc20BalanceRepo(dataProvider, logger)
-	iScanProgressRepo := data.NewScanProgressRepo(dataProvider, logger)
-	erc20Processor := processor.NewERC20Processor(iErc20TransferRepo, iErc20BalanceRepo, iScanProgressRepo, logger)
-	iLafStakingRepo := data.NewLafStakingRepo(dataProvider, logger)
-	lafStakingProcessor := processor.NewLafStakingProcessor(iLafStakingRepo, logger)
-	v := processor.ProvideProcessors(erc20Processor, lafStakingProcessor)
-	iProcessorConfigRepo := data.NewProcessorConfigRepo(dataProvider, logger)
-	eventDispatcher := processor.NewEventDispatcher(v, iProcessorConfigRepo, logger)
-	app := newJobApp(iEventRepo, eventDispatcher)
-	return app, func() {
-		cleanup()
-	}, nil
+func initApp(confData *conf.Data, logger log.Logger) (*jobs.App, func(), error) {
+	app := newJobApp(logger)
+	return app, func() {}, nil
 }
 
 // wire.go:
 
 // newJobApp 创建 Job App
-func newJobApp(
-	eventRepo biz.IEventRepo,
-	eventDispatcher biz.IEventDispatcher,
-) *jobs.App {
+func newJobApp(logger log.Logger) *jobs.App {
 	return &jobs.App{
-		EventRepo:       eventRepo,
-		EventDispatcher: eventDispatcher,
+		Logger: logger,
 	}
 }

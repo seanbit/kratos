@@ -8,11 +8,11 @@ import (
 	"github.com/seanbit/kratos/webkit"
 	"github.com/spf13/cobra"
 
-	"evm-scan/cmd/job/jobs"
-	"evm-scan/internal/global"
+	"github.com/seanbit/kratos/template/cmd/job/jobs"
+	"github.com/seanbit/kratos/template/internal/global"
 
 	// blank import: 触发各 job 包的 init() 完成自注册
-	_ "evm-scan/cmd/job/jobs/example"
+	_ "github.com/seanbit/kratos/template/cmd/job/jobs/example"
 )
 
 var (
@@ -20,8 +20,8 @@ var (
 	secretFile string
 	rootCmd    = &cobra.Command{
 		Use:   "job",
-		Short: "EVM Scan Job Runner",
-		Long:  "Command-line tool for running various EVM scan jobs",
+		Short: "Job Runner",
+		Long:  "Command-line tool for running various jobs",
 	}
 	versionCmd = &cobra.Command{
 		Use:   "version",
@@ -61,7 +61,7 @@ func getSubCommandRunE(fn func(*jobs.App, *cobra.Command, []string) error) func(
 
 		webkit.InitLogger(rootCmd.Use, versionCmd.Version, int(cfg.LogLevel))
 
-		app, cleanup, err := initApp(cfg.Server, cfg.Data, cfg.Blockchain, cfg.Scanner, log.DefaultLogger)
+		app, cleanup, err := initApp(cfg.Data, log.DefaultLogger)
 		if err != nil {
 			return fmt.Errorf("failed to init app: %w", err)
 		}
