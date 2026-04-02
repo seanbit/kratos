@@ -1,0 +1,43 @@
+---
+# Production environment HPA patch with more aggressive scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{APP_NAME}}-consumer
+spec:
+  minReplicas: 2  # Ensure HA with minimum 2 replicas
+  maxReplicas: 20  # Higher limit for production burst handling
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60  # More aggressive CPU target for production
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30  # Faster scale up in production
+      policies:
+        - type: Percent
+          value: 200  # Allow doubling replica count quickly
+          periodSeconds: 15
+        - type: Pods
+          value: 10
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 600  # Very slow scale down to avoid thrashing
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 120
+        - type: Pods
+          value: 2
+          periodSeconds: 120
+      selectPolicy: Min

@@ -4,18 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/go-kratos/kratos/v2/encoding/json"
 	"github.com/seanbit/kratos/template/internal/global"
 	"github.com/seanbit/kratos/webkit"
-	"github.com/seanbit/kratos/webkit/transport/crontab"
+	"github.com/seanbit/kratos/webkit/transport/asynq"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/transport/grpc"
-	"github.com/go-kratos/kratos/v2/transport/http"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 
 	_ "go.uber.org/automaxprocs"
 )
@@ -51,18 +49,16 @@ func init() {
 	}
 }
 
-func newApp(gs *grpc.Server, hs *http.Server, crontor *crontab.Executor) *kratos.App {
+func newApp(asynqs *asynq.Server, ms *khttp.Server) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
 		kratos.Version(Version),
 		kratos.Metadata(map[string]string{}),
 		kratos.Server(
-			gs,
-			hs,
-			crontor,
+			asynqs,
+			ms,
 		),
-		kratos.StopTimeout(time.Second*300),
 	)
 }
 
@@ -83,21 +79,7 @@ func main() {
 		panic(err)
 	}
 
-	// 初始化 sentry
-	err := webkit.InitSentry(Name, Version, bc.Env.String(), bc.Sentry.GetDsn(), bc.Sentry.GetAttachStackTrace())
-	if err != nil {
-		log.Errorf("InitSentry: %+v", err)
-		panic(err)
-	}
-
-	// 初始化分布式追踪
-	if err := webkit.InitTracerProvider(bc.Tracing.GetType(), bc.Tracing.GetHost(), int(bc.Tracing.GetPort()),
-		Name, Version, bc.Env.String()); err != nil {
-		log.Errorf("InitTracerProvider failed: %+v", err)
-		panic(err)
-	}
-
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.S3, bc.GeoIp, bc.Alarm, bc.Auth, bc.Cronjob, log.GetLogger())
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.S3, bc.GeoIp, bc.Auth, log.GetLogger())
 	if err != nil {
 		panic(err)
 	}

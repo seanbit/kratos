@@ -1,0 +1,71 @@
+---
+# Horizontal Pod Autoscaler for Consumer Service
+# Uses CPU-based scaling by default with support for custom metrics
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{APP_NAME}}-consumer
+  labels:
+    app: {{APP_NAME}}-consumer
+    version: {{VERSION}}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{APP_NAME}}-consumer
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    # Primary metric: CPU utilization
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    # Secondary metric: Memory utilization (optional, for fine-tuning)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    # Scale up quickly when load increases
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+    # Scale down more slowly to avoid flapping
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+      selectPolicy: Min
+
+---
+# Optional: PodDisruptionBudget for consumer service
+# Ensures minimum availability during node maintenance
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{APP_NAME}}-consumer
+  labels:
+    app: {{APP_NAME}}-consumer
+    version: {{VERSION}}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: {{APP_NAME}}-consumer

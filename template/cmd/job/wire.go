@@ -8,16 +8,11 @@ import (
 	"github.com/google/wire"
 
 	"github.com/seanbit/kratos/template/cmd/job/jobs"
-	"github.com/seanbit/kratos/template/internal/conf"
-	"github.com/seanbit/kratos/template/internal/infra"
 )
 
 // initApp 初始化应用依赖
-func initApp(*conf.Data, log.Logger) (*jobs.App, func(), error) {
+func initApp(log.Logger) (*jobs.App, func(), error) {
 	panic(wire.Build(
-		// 基础设施层
-		infra.ProviderSet,
-
 		// Job App
 		newJobApp,
 	))

@@ -74,7 +74,6 @@ dao:
 generate:
 	go mod tidy
 	go generate ./...
-	wire ./...
 
 .PHONY: all
 # generate all

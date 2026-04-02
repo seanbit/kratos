@@ -8,17 +8,20 @@ package main
 
 import (
 	"github.com/go-kratos/kratos/v2/log"
-
 	"github.com/seanbit/kratos/template/cmd/job/jobs"
-	"github.com/seanbit/kratos/template/internal/conf"
+)
+
+import (
+	_ "github.com/seanbit/kratos/template/cmd/job/jobs/example"
 )
 
 // Injectors from wire.go:
 
 // initApp 初始化应用依赖
-func initApp(confData *conf.Data, logger log.Logger) (*jobs.App, func(), error) {
+func initApp(logger log.Logger) (*jobs.App, func(), error) {
 	app := newJobApp(logger)
-	return app, func() {}, nil
+	return app, func() {
+	}, nil
 }
 
 // wire.go:

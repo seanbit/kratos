@@ -1,0 +1,53 @@
+---
+# Production environment consumer deployment patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{APP_NAME}}-consumer
+spec:
+  # Note: replicas is managed by HPA, but we set a reasonable initial value
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: consumer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m  # Higher CPU limit for burst processing
+              memory: 512Mi
+          # Stricter probes for production
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Pod topology spread for high availability
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app: {{APP_NAME}}-consumer
+      # Affinity to avoid co-location with web service
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - {{APP_NAME}}-web
+                topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 120  # Allow time for task completion during shutdown

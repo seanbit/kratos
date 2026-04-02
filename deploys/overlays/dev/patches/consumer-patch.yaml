@@ -1,0 +1,24 @@
+---
+# Dev environment consumer deployment patch
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{APP_NAME}}-consumer
+spec:
+  replicas: 1  # Single replica for dev to save resources
+  template:
+    spec:
+      containers:
+        - name: consumer
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          # Shorter probe delays for faster startup in dev
+          livenessProbe:
+            initialDelaySeconds: 10
+          readinessProbe:
+            initialDelaySeconds: 3

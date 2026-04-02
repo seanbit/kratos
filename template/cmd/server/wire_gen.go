@@ -17,7 +17,6 @@ import (
 	"github.com/seanbit/kratos/template/internal/server"
 	"github.com/seanbit/kratos/template/internal/server/middlewares"
 	"github.com/seanbit/kratos/template/internal/service"
-	crontab2 "github.com/seanbit/kratos/webkit/transport/crontab"
 )
 
 import (
@@ -27,7 +26,7 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *conf.GeoIp, alarm *conf.Alarm, auth *conf.Auth, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *conf.GeoIp, alarm *conf.Alarm, auth *conf.Auth, cronJob *conf.CronJob, logger log.Logger) (*kratos.App, func(), error) {
 	dataProvider, cleanup, err := infra.NewDataProvider(confData)
 	if err != nil {
 		return nil, nil, err
@@ -63,8 +62,8 @@ func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *c
 	eventHandlerServer := service.NewEventService(bizAuth)
 	asynqServer := server.NewAsynqServer(confServer, logger, eventHandlerServer)
 	jobTest := crontab.NewJobTest()
-	jobRegister := crontab.NewJobRegister(jobTest)
-	executor := crontab2.NewServer(jobRegister)
+	jobRegister := crontab.NewJobRegister(cronJob, jobTest)
+	executor := crontab.NewCrontabExecutor(jobRegister)
 	app := newApp(grpcServer, httpServer, asynqServer, executor)
 	return app, func() {
 		cleanup2()

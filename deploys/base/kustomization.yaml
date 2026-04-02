@@ -6,6 +6,8 @@ resources:
 - web-deployment.yaml
 - web-service.yaml
 - cronjob-deployment.yaml
+- consumer-deployment.yaml
+- consumer-hpa.yaml
 - postgres-external.yaml
 
 configMapGenerator:

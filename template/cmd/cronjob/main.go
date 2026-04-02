@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"evm-scan/internal/global"
+	"github.com/seanbit/kratos/template/internal/global"
 
 	"github.com/go-kratos/kratos/v2/encoding/json"
 	"github.com/seanbit/kratos/webkit"

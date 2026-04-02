@@ -99,7 +99,7 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.S3, bc.GeoIp, bc.Alarm, bc.Auth, log.GetLogger())
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.S3, bc.GeoIp, bc.Alarm, bc.Auth, bc.Cronjob, log.GetLogger())
 	if err != nil {
 		panic(err)
 	}

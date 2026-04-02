@@ -36,7 +36,14 @@ Working directory:
 app/
 ├── api/ # Protobuf 定义 (Http/Rpc 服务、DTO、错误码)
 │ ├── protos/ # Proto 主目录，子目录按业务层划分定义，导出代码在上级api目录下的同名子目录
-│ │ └── web/ # （示例）这里是web相关的proto，可以增加portal、back等
+│ │ ├── web/ # （示例）这里是web相关的proto，可以增加portal、back等
+│ │ └── event/ # 事件/消息 proto (Asynq consumer 处理的事件定义)
+├── cmd/ # 服务入口
+│ ├── web/ # Web API 服务 (gRPC + HTTP + Crontab)
+│ ├── server/ # 完整服务 (gRPC + HTTP + Asynq + Crontab)
+│ ├── consumer/ # 独立 Asynq 消费者服务 (可弹性伸缩，Metrics HTTP :9090)
+│ ├── cronjob/ # 定时任务服务
+│ └── job/ # 一次性任务工具 (K8S Job)
 ├── internal/ # 业务代码（遵循 DDD 分层）
 │ ├── biz/ # 领域层：实体、聚合、用例、接口抽象
 │ ├── data/ # 数据层：Repo 实现（数据库、缓存、消息队列、Rpc调用）

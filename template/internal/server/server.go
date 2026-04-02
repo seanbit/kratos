@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/google/wire"
 	"github.com/seanbit/kratos/template/internal/server/middlewares"
-	"github.com/seanbit/kratos/webkit/transport/crontab"
 )
 
 // ProviderSet is server providers.
@@ -14,5 +13,4 @@ var ProviderSet = wire.NewSet(
 	NewHTTPServer,
 	NewAsynqServer,
 	NewAsynqClient,
-	crontab.NewServer,
 )

@@ -61,7 +61,7 @@ func getSubCommandRunE(fn func(*jobs.App, *cobra.Command, []string) error) func(
 
 		webkit.InitLogger(rootCmd.Use, versionCmd.Version, int(cfg.LogLevel))
 
-		app, cleanup, err := initApp(cfg.Data, log.DefaultLogger)
+		app, cleanup, err := initApp(log.DefaultLogger)
 		if err != nil {
 			return fmt.Errorf("failed to init app: %w", err)
 		}

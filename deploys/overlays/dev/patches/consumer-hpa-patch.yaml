@@ -1,0 +1,9 @@
+---
+# Dev environment: Disable HPA to save resources (use fixed replica)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{APP_NAME}}-consumer
+spec:
+  minReplicas: 1
+  maxReplicas: 1  # Fixed single replica in dev

@@ -13,8 +13,20 @@ template/
 │   ├── web/                # Generated Go code from web protos
 │   └── event/              # Generated Go code from event protos
 ├── cmd/
-│   ├── server/             # Application entry point
+│   ├── web/                # Web API service (gRPC + HTTP + Crontab)
+│   │   ├── main.go             # Main function (full init: config, logger, metrics, sentry, tracing)
+│   │   ├── wire.go             # Wire dependency injection definition
+│   │   └── wire_gen.go         # Wire generated code (auto-generated)
+│   ├── server/             # Full service entry point (gRPC + HTTP + Asynq + Crontab)
 │   │   ├── main.go             # Main function
+│   │   ├── wire.go             # Wire dependency injection definition
+│   │   └── wire_gen.go         # Wire generated code (auto-generated)
+│   ├── consumer/           # Standalone Asynq consumer service (independently scalable)
+│   │   ├── main.go             # Simplified init (config, logger, metrics) + Asynq + Metrics HTTP(:9090)
+│   │   ├── wire.go             # Wire DI: infra + data + biz + EventService + AsynqServer + MetricsServer
+│   │   └── wire_gen.go         # Wire generated code (auto-generated)
+│   ├── cronjob/            # Scheduled cron job service
+│   │   ├── main.go             # Simplified init (config, logger, metrics) + Crontab executor
 │   │   ├── wire.go             # Wire dependency injection definition
 │   │   └── wire_gen.go         # Wire generated code (auto-generated)
 │   └── job/                # One-off job runner (K8S Job via GitHub Action)
@@ -30,7 +42,7 @@ template/
 │   ├── biz/                # Domain layer (entities, use cases, interfaces)
 │   ├── data/               # Data layer (repository implementations)
 │   ├── service/            # Application layer (API handlers)
-│   ├── server/             # Server setup (HTTP, gRPC)
+│   ├── server/             # Server setup (HTTP, gRPC, Asynq, Metrics)
 │   ├── infra/              # Infrastructure layer (DB, Redis, clients)
 │   ├── conf/               # Configuration proto and generated code
 │   ├── global/             # Global variables and config access
@@ -121,10 +133,18 @@ var ProviderSet = wire.NewSet(NewAuth, NewProbe)
 var ProviderSet = wire.NewSet(NewAuthRepo, NewHealthRepo)
 
 // service/service.go
-var ProviderSet = wire.NewSet(NewAuthService, NewProbeService)
+var ProviderSet = wire.NewSet(NewEventService, NewProbeService, NewAuthService)
 
 // infra/infra.go
 var ProviderSet = wire.NewSet(NewDataProvider, NewS3Client)
+
+// server/server.go (shared by web/server, consumer uses individual providers)
+var ProviderSet = wire.NewSet(
+    middlewares.NewUserAuth, middlewares.NewHttpBuilder,
+    NewGRPCServer, NewHTTPServer, NewAsynqServer, NewAsynqClient,
+)
+// server/metrics.go (used by consumer separately, not in ProviderSet)
+// NewMetricsServer — lightweight HTTP on :9090 for health probes + Prometheus metrics
 ```
 
 After adding new providers, run: `make generate`
@@ -199,9 +219,15 @@ func NewXxxRepo(db infra.PostgresProvider, rdb infra.RedisProvider, logger log.L
 
 ## Health Checks
 
+### Web/Server Service (via ProbeService on HTTP API port)
 - Liveness: `GET /health/live` - returns 200 if process is alive
 - Readiness: `GET /health/ready` - returns 200 if all dependencies are healthy
 - Detailed: `GET /health` - returns JSON with component status
+
+### Consumer Service (via MetricsServer on :9090)
+- Liveness: `GET /health` - returns 200 OK
+- Readiness: `GET /ready` - returns 200 OK
+- Metrics: `GET /metrics` - Prometheus metrics endpoint
 
 ## Dependencies
 

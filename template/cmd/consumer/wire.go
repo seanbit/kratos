@@ -11,7 +11,6 @@ import (
 	"github.com/google/wire"
 	"github.com/seanbit/kratos/template/internal/biz"
 	"github.com/seanbit/kratos/template/internal/conf"
-	"github.com/seanbit/kratos/template/internal/crontab"
 	"github.com/seanbit/kratos/template/internal/data"
 	"github.com/seanbit/kratos/template/internal/infra"
 	"github.com/seanbit/kratos/template/internal/server"
@@ -19,6 +18,6 @@ import (
 )
 
 // wireApp init kratos application.
-func wireApp(*conf.Server, *conf.Data, *conf.S3, *conf.GeoIp, *conf.Alarm, *conf.Auth, *conf.CronJob, log.Logger) (*kratos.App, func(), error) {
-	panic(wire.Build(infra.ProviderSet, data.ProviderSet, biz.ProviderSet, crontab.ProviderSet, service.ProviderSet, server.ProviderSet, newApp))
+func wireApp(*conf.Server, *conf.Data, *conf.S3, *conf.GeoIp, *conf.Auth, log.Logger) (*kratos.App, func(), error) {
+	panic(wire.Build(infra.ProviderSet, data.ProviderSet, biz.ProviderSet, service.NewEventService, server.NewAsynqServer, server.NewAsynqClient, server.NewMetricsServer, newApp))
 }

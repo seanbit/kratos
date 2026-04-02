@@ -11,11 +11,9 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/seanbit/kratos/template/internal/biz"
 	"github.com/seanbit/kratos/template/internal/conf"
-	"github.com/seanbit/kratos/template/internal/crontab"
 	"github.com/seanbit/kratos/template/internal/data"
 	"github.com/seanbit/kratos/template/internal/infra"
 	"github.com/seanbit/kratos/template/internal/server"
-	"github.com/seanbit/kratos/template/internal/server/middlewares"
 	"github.com/seanbit/kratos/template/internal/service"
 )
 
@@ -26,15 +24,11 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *conf.GeoIp, alarm *conf.Alarm, auth *conf.Auth, cronJob *conf.CronJob, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *conf.GeoIp, auth *conf.Auth, logger log.Logger) (*kratos.App, func(), error) {
 	dataProvider, cleanup, err := infra.NewDataProvider(confData)
 	if err != nil {
 		return nil, nil, err
 	}
-	iHealthRepo := data.NewHealthRepo(dataProvider, dataProvider, logger)
-	probe := biz.NewProbe(iHealthRepo)
-	probeService := service.NewProbeService(probe)
-	grpcServer := server.NewGRPCServer(confServer, probeService, logger)
 	iAuthRepo := data.NewAuthRepo(dataProvider, dataProvider)
 	client, err := server.NewAsynqClient(confServer)
 	if err != nil {
@@ -49,22 +43,11 @@ func wireApp(confServer *conf.Server, confData *conf.Data, s3 *conf.S3, geoIp *c
 		return nil, nil, err
 	}
 	bizAuth := biz.NewAuth(auth, iAuthRepo, iAuthLogRepo, iGeoIp)
-	userAuth := middlewares.NewUserAuth(bizAuth)
-	httpBuilder := middlewares.NewHttpBuilder(userAuth)
-	iAlarmMessageRepo := data.NewAlarmMessageRepo(dataProvider, dataProvider, logger)
-	iAlarmRepo, cleanup2, err := data.NewAlarm(alarm, iAlarmMessageRepo)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	authService := service.NewAuthService(bizAuth)
-	httpServer := server.NewHTTPServer(confServer, logger, httpBuilder, probeService, iAlarmRepo, authService)
-	jobTest := crontab.NewJobTest()
-	jobRegister := crontab.NewJobRegister(cronJob, jobTest)
-	executor := crontab.NewCrontabExecutor(jobRegister)
-	app := newApp(grpcServer, httpServer, executor)
+	eventHandlerServer := service.NewEventService(bizAuth)
+	asynqServer := server.NewAsynqServer(confServer, logger, eventHandlerServer)
+	httpServer := server.NewMetricsServer()
+	app := newApp(asynqServer, httpServer)
 	return app, func() {
-		cleanup2()
 		cleanup()
 	}, nil
 }

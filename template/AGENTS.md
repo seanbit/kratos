@@ -5,10 +5,7 @@
 **必须使用 Makefile 命令进行编译：**
 
 ```bash
-make build           # 编译所有服务
-make build-web       # 编译 web 服务
-make build-job       # 编译 job 工具
-make build-cronjob   # 编译 cronjob 服务
+make build           # 编译所有服务 (web, server, consumer, cronjob, job)
 ```
 
 **编译产物统一输出到 `bin/` 目录。**
@@ -21,9 +18,11 @@ make build-cronjob   # 编译 cronjob 服务
 
 ```
 ├── cmd/                    # 服务入口
-│   ├── web/                # Web 服务
-│   ├── job/                # 一次性任务工具
-│   └── cronjob/            # 定时任务服务
+│   ├── web/                # Web API 服务 (gRPC + HTTP + Crontab)
+│   ├── server/             # 完整服务 (gRPC + HTTP + Asynq + Crontab)
+│   ├── consumer/           # 独立 Asynq 消费者服务 (可弹性伸缩，Metrics HTTP :9090)
+│   ├── cronjob/            # 定时任务服务
+│   └── job/                # 一次性任务工具 (K8S Job)
 ├── internal/               # 内部业务代码
 │   ├── conf/               # 配置定义 (Protobuf)
 │   ├── crontab/            # 定时任务实现
@@ -50,6 +49,8 @@ make build-cronjob   # 编译 cronjob 服务
 修改 `.proto` 文件后，运行：
 
 ```bash
-make config    # 生成 protobuf 代码
-make wire      # 生成 wire 依赖注入代码
+make config    # 生成 protobuf 代码 (conf.proto)
+make api       # 生成 API protobuf 代码
+make generate  # 生成 wire 依赖注入代码 (go generate ./...)
+make all       # 以上全部执行
 ```

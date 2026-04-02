@@ -7,10 +7,10 @@
 package main
 
 import (
-	"evm-scan/internal/conf"
-	"evm-scan/internal/crontab"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/seanbit/kratos/template/internal/conf"
+	"github.com/seanbit/kratos/template/internal/crontab"
 )
 
 import (

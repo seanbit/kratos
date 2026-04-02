@@ -5,7 +5,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/seanbit/kratos/webkit/transport/crontab"
 
-	"evm-scan/internal/conf"
+	"github.com/seanbit/kratos/template/internal/conf"
 )
 
 // ProviderSet is biz providers.
