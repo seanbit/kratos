@@ -5,7 +5,7 @@
 **必须使用 Makefile 命令进行编译：**
 
 ```bash
-make build           # 编译所有服务 (web, server, consumer, cronjob, job)
+make build           # 编译所有服务 (web, consumer, cronjob, job)
 ```
 
 **编译产物统一输出到 `bin/` 目录。**
@@ -19,7 +19,6 @@ make build           # 编译所有服务 (web, server, consumer, cronjob, job)
 ```
 ├── cmd/                    # 服务入口
 │   ├── web/                # Web API 服务 (gRPC + HTTP + Crontab)
-│   ├── server/             # 完整服务 (gRPC + HTTP + Asynq + Crontab)
 │   ├── consumer/           # 独立 Asynq 消费者服务 (可弹性伸缩，Metrics HTTP :9090)
 │   ├── cronjob/            # 定时任务服务
 │   └── job/                # 一次性任务工具 (K8S Job)

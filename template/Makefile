@@ -1,6 +1,7 @@
 GOHOSTOS:=$(shell go env GOHOSTOS)
 GOPATH:=$(shell go env GOPATH)
 VERSION=$(shell git describe --tags --always)
+PROJECT_NAME=$(shell go list -m | xargs basename)
 
 ifeq ($(GOHOSTOS), windows)
 	#the `find.exe` is different from `find` in bash/shell.
@@ -62,9 +63,28 @@ api:
 	@echo "Code generation completed!"
 
 .PHONY: build
-# build
-build:
-	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
+# build all services
+build: build-web build-consumer build-cronjob build-job
+
+.PHONY: build-web
+# build web service
+build-web:
+	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/$(PROJECT_NAME)-web ./cmd/web
+
+.PHONY: build-consumer
+# build consumer service
+build-consumer:
+	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/$(PROJECT_NAME)-consumer ./cmd/consumer
+
+.PHONY: build-cronjob
+# build cronjob service
+build-cronjob:
+	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/$(PROJECT_NAME)-cronjob ./cmd/cronjob
+
+.PHONY: build-job
+# build job service
+build-job:
+	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/$(PROJECT_NAME)-job ./cmd/job
 
 dao:
 	go run internal/scripts/dao-gen/*.go

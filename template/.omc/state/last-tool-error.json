@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"make all 2>&1\",\"timeout\":300000,\"description\":\"Run make all with fixed Makefile\"}",
+  "error": "Exit code 2\nmake api;\nGenerating code for all proto directories...\nProcessing web...\nProcessing event...\napi/protos/event/event.auth.proto:5:1: warning: Import google/api/annotations.proto is unused.\napi/protos/event/event.auth.proto:6:1: warning: Import google/protobuf/empty.proto is unused.\napi/protos/event/event.proto:5:1: warning: Import google/api/annotations.proto is unused.\nCode generation completed!\nmake config;\nprotoc --proto_path=./internal \\\n\t       --proto_path=./third_party \\\n \t    ...",
+  "timestamp": "2026-04-02T09:03:38.185Z",
+  "retry_count": 1
+}

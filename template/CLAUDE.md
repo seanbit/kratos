@@ -17,10 +17,6 @@ template/
 │   │   ├── main.go             # Main function (full init: config, logger, metrics, sentry, tracing)
 │   │   ├── wire.go             # Wire dependency injection definition
 │   │   └── wire_gen.go         # Wire generated code (auto-generated)
-│   ├── server/             # Full service entry point (gRPC + HTTP + Asynq + Crontab)
-│   │   ├── main.go             # Main function
-│   │   ├── wire.go             # Wire dependency injection definition
-│   │   └── wire_gen.go         # Wire generated code (auto-generated)
 │   ├── consumer/           # Standalone Asynq consumer service (independently scalable)
 │   │   ├── main.go             # Simplified init (config, logger, metrics) + Asynq + Metrics HTTP(:9090)
 │   │   ├── wire.go             # Wire DI: infra + data + biz + EventService + AsynqServer + MetricsServer
@@ -138,7 +134,7 @@ var ProviderSet = wire.NewSet(NewEventService, NewProbeService, NewAuthService)
 // infra/infra.go
 var ProviderSet = wire.NewSet(NewDataProvider, NewS3Client)
 
-// server/server.go (shared by web/server, consumer uses individual providers)
+// server/server.go (used by web, consumer uses individual providers)
 var ProviderSet = wire.NewSet(
     middlewares.NewUserAuth, middlewares.NewHttpBuilder,
     NewGRPCServer, NewHTTPServer, NewAsynqServer, NewAsynqClient,

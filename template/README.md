@@ -40,7 +40,6 @@ app/
 │ │ └── event/ # 事件/消息 proto (Asynq consumer 处理的事件定义)
 ├── cmd/ # 服务入口
 │ ├── web/ # Web API 服务 (gRPC + HTTP + Crontab)
-│ ├── server/ # 完整服务 (gRPC + HTTP + Asynq + Crontab)
 │ ├── consumer/ # 独立 Asynq 消费者服务 (可弹性伸缩，Metrics HTTP :9090)
 │ ├── cronjob/ # 定时任务服务
 │ └── job/ # 一次性任务工具 (K8S Job)
