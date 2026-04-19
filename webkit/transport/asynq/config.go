@@ -39,7 +39,7 @@ func WithQueues(queues map[string]int) ServerOption {
 	}
 }
 
-// WithLogger 设置队列配置
+// WithLogger 设置日志实例
 func WithLogger(logger log.Logger) ServerOption {
 	return func(c *Config) {
 		c.Logger = logger

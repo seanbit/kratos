@@ -307,19 +307,20 @@ func TestGetStringFromEnv(t *testing.T) {
 		os.Setenv(key, value)
 		defer os.Unsetenv(key)
 
-		got := GetStringFromEnv(key)
+		got, err := GetStringFromEnv(key)
+		if err != nil {
+			t.Errorf("GetStringFromEnv() unexpected error: %v", err)
+		}
 		if got != value {
 			t.Errorf("GetStringFromEnv() = %v, want %v", got, value)
 		}
 	})
 
-	t.Run("missing env var panics", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("GetStringFromEnv() should panic for missing env var")
-			}
-		}()
-		GetStringFromEnv("NON_EXISTENT_ENV_VAR_12345")
+	t.Run("missing env var returns error", func(t *testing.T) {
+		_, err := GetStringFromEnv("NON_EXISTENT_ENV_VAR_12345")
+		if err == nil {
+			t.Error("GetStringFromEnv() should return error for missing env var")
+		}
 	})
 }
 

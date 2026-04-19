@@ -5,17 +5,39 @@ import (
 	"fmt"
 )
 
+// Notifier is the common interface for sending alarm/notification messages.
+type Notifier interface {
+	SendTextMessage(ctx context.Context, msg *AlarmTextMessage) error
+}
+
 // Alarm represents an alarm structure with necessary information.
+var _ Notifier = (*Alarm)(nil)
+
 type Alarm struct {
 	ServiceName string `json:"service_name"`
 	LarkURL     string `json:"lark_url"`
+	GrafanaURL  string `json:"grafana_url"`
 }
 
 // NewAlarm creates a new Alarm instance.
-func NewAlarm(serviceName string, larkURL string) *Alarm {
-	return &Alarm{
+func NewAlarm(serviceName string, larkURL string, opts ...AlarmOption) *Alarm {
+	a := &Alarm{
 		ServiceName: serviceName,
 		LarkURL:     larkURL,
+	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
+}
+
+// AlarmOption is a functional option for Alarm.
+type AlarmOption func(*Alarm)
+
+// WithGrafanaURL sets the Grafana base URL for Loki log links.
+func WithGrafanaURL(url string) AlarmOption {
+	return func(a *Alarm) {
+		a.GrafanaURL = url
 	}
 }
 
@@ -93,7 +115,10 @@ func (a *Alarm) SendTextMessage(ctx context.Context, msg *AlarmTextMessage) erro
 }
 
 func (a *Alarm) getLokiUrl(traceId string) string {
-	lokiUrl := "https://grafana.carv.io/explore?schemaVersion=1&panes=%7B%22r8g%22:%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Bnamespace%3D%5C%22carv-api%5C%22,%20app%3D%5C%22"
+	if a.GrafanaURL == "" {
+		return ""
+	}
+	lokiUrl := a.GrafanaURL + "/explore?schemaVersion=1&panes=%7B%22r8g%22:%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Bnamespace%3D%5C%22carv-api%5C%22,%20app%3D%5C%22"
 	lokiUrl += a.ServiceName
 	lokiUrl += "%5C%22%7D%20%7C%3D%20%60"
 	lokiUrl += traceId

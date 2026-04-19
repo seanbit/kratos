@@ -24,7 +24,34 @@ const (
 	SecurityHeaders  = "Strict-Transport-Security"
 )
 
+// CORSConfig allows customizing CORS response headers.
+type CORSConfig struct {
+	AllowedMethods  string
+	AllowedHeaders  string
+	ExposedHeaders  string
+	HSTSMaxAge      string
+}
+
+// DefaultCORSConfig returns the default CORS configuration.
+func DefaultCORSConfig() *CORSConfig {
+	return &CORSConfig{
+		AllowedMethods: "GET,POST,OPTIONS,PUT,PATCH,DELETE",
+		AllowedHeaders: "Content-Type,Recaptcha-Token,X-Token,Platform," +
+			"X-Requested-With,Access-Control-Allow-Credentials,User-Agent,Content-Length,Authorization,Locale,Source",
+		ExposedHeaders: "Content-Length,X-Token",
+		HSTSMaxAge:     "max-age=31536000",
+	}
+}
+
 func DealWithHeader(tr transport.Transporter, allowDomains []string) error {
+	return DealWithHeaderConfig(tr, allowDomains, nil)
+}
+
+func DealWithHeaderConfig(tr transport.Transporter, allowDomains []string, cfg *CORSConfig) error {
+	if cfg == nil {
+		cfg = DefaultCORSConfig()
+	}
+
 	origin := tr.RequestHeader().Get(Origin)
 	if origin == "" {
 		origin = tr.RequestHeader().Get(Referer)
@@ -53,20 +80,19 @@ func DealWithHeader(tr transport.Transporter, allowDomains []string) error {
 		}
 	}
 	if tr.ReplyHeader().Get(AllowMethods) == "" {
-		tr.ReplyHeader().Set(AllowMethods, "GET,POST,OPTIONS,PUT,PATCH,DELETE")
+		tr.ReplyHeader().Set(AllowMethods, cfg.AllowedMethods)
 	}
 	if tr.ReplyHeader().Get(AllowCredentials) == "" {
 		tr.ReplyHeader().Set(AllowCredentials, "true")
 	}
 	if tr.ReplyHeader().Get(ExposeHeaders) == "" {
-		tr.ReplyHeader().Set(ExposeHeaders, "Content-Length,X-Token")
+		tr.ReplyHeader().Set(ExposeHeaders, cfg.ExposedHeaders)
 	}
 	if tr.ReplyHeader().Get(AllowHeaders) == "" {
-		tr.ReplyHeader().Set(AllowHeaders, "Content-Type,Recaptcha-Token,X-Token,Platform"+
-			"X-Requested-With,Access-Control-Allow-Credentials,User-Agent,Content-Length,Authorization,Locale,Source")
+		tr.ReplyHeader().Set(AllowHeaders, cfg.AllowedHeaders)
 	}
 	if tr.ReplyHeader().Get(SecurityHeaders) == "" {
-		tr.ReplyHeader().Set(SecurityHeaders, "max-age=31536000")
+		tr.ReplyHeader().Set(SecurityHeaders, cfg.HSTSMaxAge)
 	}
 
 	return nil

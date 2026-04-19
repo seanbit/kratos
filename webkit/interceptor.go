@@ -196,8 +196,7 @@ func TrafficInterceptMiddleware() middleware.Middleware {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			var path, hasSign, abnormal, block string
 			defer func() {
-				RecordMetricInterceptWithCtx(ctx, currentServerName, path, hasSign, abnormal, block)
-				//MetricIntercept.WithLabelValues(currentServerName, path, hasSign, abnormal, block).Inc()
+				RecordMetricIntercept(ctx, currentServerName, path, hasSign, abnormal, block)
 			}()
 			// parse sign
 			if tr, ok := transport.FromServerContext(ctx); ok {
@@ -411,7 +410,7 @@ func getStrategyByRadio(radio int) error {
 		return nil
 	}
 	if radio > 0 && radio <= 100 {
-		if rand.Intn(200)%100 < radio {
+		if rand.Intn(100) < radio {
 			return errors.New("invalid request")
 		}
 	}

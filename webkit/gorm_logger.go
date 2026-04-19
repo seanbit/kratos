@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/utils"
 )
 
-const LOGGER_PREFIX = "POSTGRES"
+const defaultLoggerPrefix = "SQL"
 
 var _ gormlogger.Interface = &GormLogger{}
 
@@ -20,6 +20,7 @@ type GormLogger struct {
 	klogger       log.Logger
 	level         gormlogger.LogLevel
 	slowThreshold time.Duration
+	prefix        string
 }
 
 func NewGormLogger(l log.Logger) *GormLogger {
@@ -27,6 +28,7 @@ func NewGormLogger(l log.Logger) *GormLogger {
 		klogger:       l,
 		level:         gormlogger.Warn,
 		slowThreshold: 200 * time.Millisecond,
+		prefix:        defaultLoggerPrefix,
 	}
 }
 
@@ -39,7 +41,14 @@ func NewGormLoggerWithArgs(l log.Logger, level gormlogger.LogLevel, slowThreshol
 		klogger:       l,
 		level:         level,
 		slowThreshold: slowThreshold,
+		prefix:        defaultLoggerPrefix,
 	}
+}
+
+// WithPrefix sets a custom log prefix (e.g., "POSTGRES", "MYSQL").
+func (l *GormLogger) WithPrefix(prefix string) *GormLogger {
+	l.prefix = prefix
+	return l
 }
 
 func (l *GormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
@@ -85,7 +94,7 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 		sql, rows := fc()
 		sql = FirstN(sql, 500)
 		log.Context(ctx).Errorw(
-			"model", LOGGER_PREFIX, "err", errString, "caller", fileNum, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
+			"model", l.prefix, "err", errString, "caller", fileNum, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
 		)
 
 	case elapsed > config.SlowThreshold && config.SlowThreshold != 0 && l.level >= gormlogger.Warn:
@@ -93,13 +102,13 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 		sql = FirstN(sql, 500)
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", config.SlowThreshold)
 		log.Context(ctx).Warnw(
-			"model", LOGGER_PREFIX, "err", errString, "caller", fileNum, "fileNum", fileNum, "slowLog", slowLog, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
+			"model", l.prefix, "err", errString, "caller", fileNum, "slowLog", slowLog, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
 		)
 	case l.level == gormlogger.Info:
 		sql, rows := fc()
 		sql = FirstN(sql, 500)
 		log.Context(ctx).Infow(
-			"model", LOGGER_PREFIX, "err", errString, "caller", fileNum, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
+			"model", l.prefix, "err", errString, "caller", fileNum, "sql_duration_ms", time.Duration(elapsed.Nanoseconds())/time.Millisecond, "sql", sql, "affected_rows", rows,
 		)
 	}
 

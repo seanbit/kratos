@@ -133,10 +133,7 @@ func initMetrics() error {
 
 // 指标记录方法
 
-func RecordMetricIntercept(serverName, path, hasSign, verify, block string) {
-	RecordMetricInterceptWithCtx(nil, serverName, path, hasSign, verify, block)
-}
-func RecordMetricInterceptWithCtx(ctx context.Context, serverName, path, hasSign, verify, block string) {
+func RecordMetricIntercept(ctx context.Context, serverName, path, hasSign, verify, block string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -153,10 +150,7 @@ func RecordMetricInterceptWithCtx(ctx context.Context, serverName, path, hasSign
 	)
 }
 
-func RecordMetricBotInterceptor(operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail string) {
-	RecordMetricBotInterceptorWithCtx(nil, operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail)
-}
-func RecordMetricBotInterceptorWithCtx(ctx context.Context, operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail string) {
+func RecordMetricBotInterceptor(ctx context.Context, operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -175,10 +169,7 @@ func RecordMetricBotInterceptorWithCtx(ctx context.Context, operation, block, bl
 	)
 }
 
-func RecordMetricTurnstile(operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail string) {
-	RecordMetricTurnstileWithCtx(nil, operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail)
-}
-func RecordMetricTurnstileWithCtx(ctx context.Context, operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail string) {
+func RecordMetricTurnstile(ctx context.Context, operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -196,10 +187,7 @@ func RecordMetricTurnstileWithCtx(ctx context.Context, operation, success, heade
 	)
 }
 
-func RecordAlarmStatsMetric(serviceName, function string) {
-	RecordAlarmStatsMetricWithCtx(nil, serviceName, function)
-}
-func RecordAlarmStatsMetricWithCtx(ctx context.Context, serviceName, function string) {
+func RecordAlarmStatsMetric(ctx context.Context, serviceName, function string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -215,16 +203,10 @@ func RecordAlarmStatsMetricWithCtx(ctx context.Context, serviceName, function st
 
 // RecordPlatformMetric 记录平台告警指标
 // 注意：title 和 msg 仅用于日志记录，不作为 metrics 标签（避免高基数问题）
-func RecordPlatformMetric(level, platform, title, msg string) {
-	RecordPlatformMetricWithCtx(nil, level, platform, title, msg)
-}
-
-func RecordPlatformMetricWithCtx(ctx context.Context, level, platform, title, msg string) {
+func RecordPlatformMetric(ctx context.Context, level, platform, title, msg string) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// 只使用低基数标签：level 和 platform
-	// title 和 msg 为高基数字段，仅记录到日志，不作为 metrics 标签
 	_platformMetric.Add(
 		ctx,
 		1,
@@ -244,10 +226,7 @@ func RecordPlatformMetricWithCtx(ctx context.Context, level, platform, title, ms
 	)
 }
 
-func RecordMethodDurationMetric(serviceName, operation, proc string, duration float64) {
-	RecordMethodDurationMetricWithCtx(nil, serviceName, operation, proc, duration)
-}
-func RecordMethodDurationMetricWithCtx(ctx context.Context, serviceName, operation, proc string, duration float64) {
+func RecordMethodDurationMetric(ctx context.Context, serviceName, operation, proc string, duration float64) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -260,4 +239,25 @@ func RecordMethodDurationMetricWithCtx(ctx context.Context, serviceName, operati
 			attribute.String("proc", proc),
 		),
 	)
+}
+
+// Deprecated aliases — use the unified context-first functions above.
+
+func RecordMetricInterceptWithCtx(ctx context.Context, serverName, path, hasSign, verify, block string) {
+	RecordMetricIntercept(ctx, serverName, path, hasSign, verify, block)
+}
+func RecordMetricBotInterceptorWithCtx(ctx context.Context, operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail string) {
+	RecordMetricBotInterceptor(ctx, operation, block, blockInterceptor, success, headerExist, verifySuccess, interceptIfVerifyFail)
+}
+func RecordMetricTurnstileWithCtx(ctx context.Context, operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail string) {
+	RecordMetricTurnstile(ctx, operation, success, headerExist, verifySuccess, interceptIfWithoutHeader, interceptIfVerifyFail)
+}
+func RecordAlarmStatsMetricWithCtx(ctx context.Context, serviceName, function string) {
+	RecordAlarmStatsMetric(ctx, serviceName, function)
+}
+func RecordPlatformMetricWithCtx(ctx context.Context, level, platform, title, msg string) {
+	RecordPlatformMetric(ctx, level, platform, title, msg)
+}
+func RecordMethodDurationMetricWithCtx(ctx context.Context, serviceName, operation, proc string, duration float64) {
+	RecordMethodDurationMetric(ctx, serviceName, operation, proc, duration)
 }

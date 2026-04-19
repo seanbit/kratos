@@ -12,6 +12,15 @@ import (
 
 const (
 	dataReplace = "@DATA"
+
+	// Error code to HTTP status mappings
+	codeServerError   = 500
+	codeForbidden     = 403
+	codeRateLimit     = 429
+	codeRateLimitAlt  = 4300
+	codeRedirect      = 3002
+	codeBadRequest    = 4000
+	codeUnauthorized  = 4200
 )
 
 type JsonReply struct {
@@ -30,7 +39,7 @@ func ErrorEncoder(errorReasonValue map[string]int32) khttp.EncodeErrorFunc {
 		parsedErr := kerr.FromError(err)
 		retCode := errorReasonValue[parsedErr.Reason]
 		message := parsedErr.Message
-		if retCode == 0 || retCode == 500 {
+		if retCode == 0 || retCode == codeServerError {
 			message = "Oops, something went wrong."
 		}
 		reply := &JsonReply{
@@ -45,19 +54,19 @@ func ErrorEncoder(errorReasonValue map[string]int32) khttp.EncodeErrorFunc {
 		}
 
 		switch retCode {
-		case 403:
+		case codeForbidden:
 			http.Error(w, string(body), http.StatusForbidden)
 			return
-		case 429, 4300:
+		case codeRateLimit, codeRateLimitAlt:
 			http.Error(w, string(body), http.StatusTooManyRequests)
 			return
-		case 3002:
+		case codeRedirect:
 			http.Redirect(w, r, reply.Message, http.StatusFound)
 			return
-		case 4000:
+		case codeBadRequest:
 			http.Error(w, string(body), http.StatusBadRequest)
 			return
-		case 4200:
+		case codeUnauthorized:
 			http.Error(w, string(body), http.StatusUnauthorized)
 			return
 		}

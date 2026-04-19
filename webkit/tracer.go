@@ -3,6 +3,7 @@ package webkit
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-kratos/kratos/v2/log"
 
@@ -18,6 +19,12 @@ import (
 
 // InitTracerProvider  Set global trace provider
 func InitTracerProvider(providerType, host string, port int, serviceName, serviceVersion string, env string) error {
+	return InitTracerProviderWithSampling(providerType, host, port, serviceName, serviceVersion, env, 1.0)
+}
+
+// InitTracerProviderWithSampling sets global trace provider with configurable sampling rate.
+// samplingRate: 0.0 to 1.0, where 1.0 means 100% sampling.
+func InitTracerProviderWithSampling(providerType, host string, port int, serviceName, serviceVersion string, env string, samplingRate float64) error {
 	if host == "" && port == 0 {
 		log.Infow("msg", "trace disabled")
 		return nil
@@ -25,30 +32,29 @@ func InitTracerProvider(providerType, host string, port int, serviceName, servic
 
 	var err error
 	var exp tracesdk.SpanExporter
-	switch providerType {
+	switch strings.ToLower(providerType) {
 	case "jaeger":
 		// Create the Jaeger exporter
 		exp, err = jaeger.New(jaeger.WithAgentEndpoint(
 			jaeger.WithAgentHost(host),
 			jaeger.WithAgentPort(fmt.Sprint(port)),
 		))
-	case "OTLP":
+	case "otlp":
 		clientOpts := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(fmt.Sprintf("%s:%d", host, port)),
 			otlptracegrpc.WithInsecure(),
 		}
 		exp, err = otlptrace.New(context.Background(), otlptracegrpc.NewClient(clientOpts...))
+	default:
+		return fmt.Errorf("unsupported tracer provider type: %q, expected \"jaeger\" or \"otlp\"", providerType)
 	}
 	if err != nil {
 		return err
 	}
 
 	tp := tracesdk.NewTracerProvider(
-		// Set the sampling rate based on the parent span to 100%
-		tracesdk.WithSampler(tracesdk.ParentBased(tracesdk.TraceIDRatioBased(1.0))),
-		// Always be sure to batch in production.
+		tracesdk.WithSampler(tracesdk.ParentBased(tracesdk.TraceIDRatioBased(samplingRate))),
 		tracesdk.WithBatcher(exp),
-		// Record information about this application in an Resource.
 		tracesdk.WithResource(resource.NewSchemaless(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.ServiceVersionKey.String(serviceVersion),

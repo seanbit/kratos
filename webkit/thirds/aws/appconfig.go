@@ -32,14 +32,14 @@ type awsConfigure struct {
 	cancel  context.CancelFunc
 }
 
-func NewConfigSource() kconfig.Source {
+func NewConfigSource() (kconfig.Source, error) {
 	metaCnf, err := loadAwsConfigMetaFromEnv()
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to load AWS config meta from env")
 	}
 	cli, err := createClient(metaCnf)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to create AppConfig client")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -48,13 +48,13 @@ func NewConfigSource() kconfig.Source {
 		metaCnf: metaCnf,
 		ctx:     ctx,
 		cancel:  cancel,
-	}
+	}, nil
 }
 
 func createClient(conf *AwsConfigMeta) (*appconfig.Client, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to load AWS default config")
 	}
 	cfg.Region = conf.Region
 	c := appconfig.NewFromConfig(cfg)
@@ -165,7 +165,7 @@ func loadAwsConfigMetaFromEnv() (*AwsConfigMeta, error) {
 }
 
 func getClientId() (string, error) {
-	// 从 /proc/self/cgroup 中读取容器 ID
+	// 从 /etc/hostname 中读取主机名作为 clientId
 	content, err := os.ReadFile("/etc/hostname")
 	if err != nil {
 		return "no_valid_client_id", err

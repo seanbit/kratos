@@ -11,12 +11,12 @@ import (
 	"os"
 )
 
-func GetStringFromEnv(k string) string {
+func GetStringFromEnv(k string) (string, error) {
 	v := os.Getenv(k)
 	if len(v) == 0 {
-		panic(fmt.Sprintf("%s NOT FOUND", k))
+		return "", fmt.Errorf("environment variable %s not found", k)
 	}
-	return v
+	return v, nil
 }
 
 // pkcs7Pad 对数据进行 PKCS7 填充

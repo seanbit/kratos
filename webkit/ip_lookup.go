@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/tencentyun/cos-go-sdk-v5"
@@ -80,17 +80,23 @@ func NewGeoIP(source GeoSource) (*GeoIP, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[NewGeoIP] create file failed")
 	}
+	tempFileName := tempFile.Name()
 	_, err = io.Copy(tempFile, dbReader)
 	if err != nil {
+		tempFile.Close()
+		os.Remove(tempFileName)
 		return nil, errors.Wrap(err, "[NewGeoIP] copy file failed")
 	}
 	err = tempFile.Sync()
 	if err != nil {
+		tempFile.Close()
+		os.Remove(tempFileName)
 		return nil, errors.Wrap(err, "[NewGeoIP] sync file failed")
 	}
+	tempFile.Close()
 
 	geoIp := &GeoIP{source: source}
-	geoIp.cli, err = geoip2.Open(tempFile.Name())
+	geoIp.cli, err = geoip2.Open(tempFileName)
 	if err != nil {
 		return nil, errors.Wrap(err, "[NewGeoIP] open file failed")
 	}

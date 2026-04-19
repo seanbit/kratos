@@ -9,18 +9,18 @@ import (
 	"time"
 )
 
-func GenerateUniqueString(size int) string {
-	b := make([]byte, size) // Adjust size for your needs.
+func GenerateUniqueString(size int) (string, error) {
+	b := make([]byte, size)
 	_, err := rand.Read(b)
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
 
 	// Get the current timestamp
 	timestamp := time.Now().Unix()
 
 	// Combine the timestamp and the random string
-	return fmt.Sprintf("%d%s", timestamp, hex.EncodeToString(b))
+	return fmt.Sprintf("%d%s", timestamp, hex.EncodeToString(b)), nil
 }
 
 func FirstN(s string, n int) string {

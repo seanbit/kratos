@@ -33,6 +33,6 @@ func NewSpan(serviceName string) *Span {
 }
 
 func (s *Span) EmitCost(ctx context.Context, start int64, proc string) {
-	RecordMethodDurationMetricWithCtx(ctx, s.ServiceName, CtxGetPath(ctx), proc, float64(time.Now().UnixNano()-start))
-	//MethodDurationMetric.WithLabelValues(s.ServiceName, CtxGetPath(ctx), proc).Observe(float64(time.Now().UnixNano() - start))
+	durationSec := float64(time.Now().UnixNano()-start) / 1e9
+	RecordMethodDurationMetric(ctx, s.ServiceName, CtxGetPath(ctx), proc, durationSec)
 }

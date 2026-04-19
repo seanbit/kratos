@@ -44,7 +44,7 @@ func NewServer(opts ...ServerOption) *Server {
 	}
 }
 
-// Start 启动 Asynq 服务器
+// Start 启动 Asynq 服务器（阻塞，直到 server 退出或出错）
 func (s *Server) Start(ctx context.Context) error {
 	// 初始化 Redis 连接
 	redisConnOpts, err := asynq.ParseRedisURI(s.config.RedisURI)
@@ -66,14 +66,9 @@ func (s *Server) Start(ctx context.Context) error {
 		s.client = asynq.NewClient(redisConnOpts)
 	})
 
-	// 在 goroutine 中启动服务器
-	go func() {
-		s.logger.Infof("Asynq server starting with: %s", s.config.RedisURI)
-		if err := s.Server.Start(s.config.Handler); err != nil {
-			s.logger.Errorf("Asynq server run error: %v", err)
-		}
-	}()
-	return nil
+	// 直接阻塞启动，Kratos app.Run() 已在独立 goroutine 中调用 Start()
+	s.logger.Infof("Asynq server starting with: %s", s.config.RedisURI)
+	return s.Server.Start(s.config.Handler)
 }
 
 // Stop 停止 Asynq 服务器

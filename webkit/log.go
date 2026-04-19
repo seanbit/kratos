@@ -3,6 +3,7 @@ package webkit
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -29,17 +30,19 @@ func GetLogger() log.Logger {
 }
 
 func InitLogger(name, version string, level int) {
-
-	//logger = getZapLogger(level)
 	logger = getZeroLogger(level)
 
 	fnSentry := func(level log.Level, keyvals ...interface{}) bool {
 		// error和fatal级别的日志上报sentry事件
 		if level == log.LevelError || level == log.LevelFatal {
-			for i := 0; i < len(keyvals); i++ {
-				if keyvals[i] == "stack" || keyvals[i] == "msg" {
+			for i := 0; i < len(keyvals)-1; i += 2 {
+				key, ok := keyvals[i].(string)
+				if !ok {
+					continue
+				}
+				if key == "stack" || key == "msg" {
 					// 忽略特定的error事件
-					if strings.HasPrefix(keyvals[i+1].(string), "tips: ") {
+					if val, ok := keyvals[i+1].(string); ok && strings.HasPrefix(val, "tips: ") {
 						return false
 					}
 				}
@@ -47,8 +50,12 @@ func InitLogger(name, version string, level int) {
 
 			// pretty message
 			evt := sentry.NewEvent()
-			for i := 0; i < len(keyvals); i++ {
-				switch keyvals[i] {
+			for i := 0; i < len(keyvals)-1; i += 2 {
+				key, ok := keyvals[i].(string)
+				if !ok {
+					continue
+				}
+				switch key {
 				// 提高可读性，忽略某些字段
 				case "time":
 				case "caller":
@@ -58,11 +65,10 @@ func InitLogger(name, version string, level int) {
 				case "service.name":
 				case "service.version":
 				case "msg":
-					evt.Message = keyvals[i+1].(string)
+					evt.Message = fmt.Sprint(keyvals[i+1])
 				default:
-					evt.Extra[keyvals[i].(string)] = keyvals[i+1]
+					evt.Extra[key] = keyvals[i+1]
 				}
-				i++
 			}
 			if evt.Message == "" {
 				return false
@@ -126,7 +132,7 @@ func Caller(depth int) log.Valuer {
 		}
 		idx := strings.LastIndexByte(file, '/')
 		if idx == -1 {
-			return file[idx+1:] + ":" + strconv.Itoa(line)
+			return file + ":" + strconv.Itoa(line)
 		}
 		idx = strings.LastIndexByte(file[:idx], '/')
 
@@ -135,7 +141,7 @@ func Caller(depth int) log.Valuer {
 		if fn == nil {
 			fnName = "?()"
 		} else {
-			funcPathList := strings.Split(runtime.FuncForPC(pc).Name(), "/")
+			funcPathList := strings.Split(fn.Name(), "/")
 			fnName = funcPathList[len(funcPathList)-1]
 		}
 
@@ -154,21 +160,6 @@ func getZeroLogger(level int) log.Logger {
 	zlogger := zerolog.New(output)
 	logger := kratoszero.NewLogger(&zlogger)
 
-	//enab := zerolog.InfoLevel
-	//switch level {
-	//case "debug":
-	//	enab = zerolog.DebugLevel
-	//case "info":
-	//	enab = zerolog.InfoLevel
-	//case "warn":
-	//	enab = zerolog.WarnLevel
-	//case "error":
-	//	enab = zerolog.ErrorLevel
-	//case "panic":
-	//	enab = zerolog.PanicLevel
-	//case "fatal":
-	//	enab = zerolog.FatalLevel
-	//}
 	zerolog.SetGlobalLevel(zerolog.Level(level))
 
 	return logger

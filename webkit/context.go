@@ -17,6 +17,32 @@ var (
 	userInfoKey = "user_info"
 )
 
+// isPrivateIP checks whether an IP address belongs to a private/reserved range (RFC1918).
+func isPrivateIP(ip string) bool {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+	privateRanges := []struct {
+		network string
+		mask    string
+	}{
+		{"10.0.0.0", "255.0.0.0"},       // 10.0.0.0/8
+		{"172.16.0.0", "255.240.0.0"},    // 172.16.0.0/12
+		{"192.168.0.0", "255.255.0.0"},   // 192.168.0.0/16
+	}
+	for _, r := range privateRanges {
+		network := net.IPNet{
+			IP:   net.ParseIP(r.network),
+			Mask: net.IPMask(net.ParseIP(r.mask).To4()),
+		}
+		if network.Contains(parsedIP) {
+			return true
+		}
+	}
+	return false
+}
+
 type App struct {
 	AppID          string   `json:"app_id"`
 	APIKey         string   `json:"api_key"`
@@ -75,14 +101,15 @@ func GetRealIP(ctx context.Context) string {
 
 	r := info.Request()
 	ip := r.Header.Get("X-Real-IP")
-	if ip != "" && !strings.HasPrefix(ip, "10.") {
+	if ip != "" && !isPrivateIP(ip) {
 		return ip
 	}
 
 	ip = r.Header.Get("X-Forwarded-For")
 	for _, i := range strings.Split(ip, ",") {
-		if net.ParseIP(i) != nil && !strings.HasPrefix(i, "10.") {
-			return i
+		trimmed := strings.TrimSpace(i)
+		if net.ParseIP(trimmed) != nil && !isPrivateIP(trimmed) {
+			return trimmed
 		}
 	}
 
@@ -91,7 +118,7 @@ func GetRealIP(ctx context.Context) string {
 		return ""
 	}
 
-	if net.ParseIP(ip) != nil && !strings.HasPrefix(ip, "10.") {
+	if net.ParseIP(ip) != nil && !isPrivateIP(ip) {
 		return ip
 	}
 	return ""

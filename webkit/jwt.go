@@ -25,8 +25,8 @@ var (
 const (
 	Authorization      = "Authorization"
 	defaultAppIDHeader = "x-app-id"
-	Expired            = 60 * 24 * 30 // 分钟
-	LoginSessionTime   = time.Hour * 24 * 7
+	Expired            = 60 * 24 * 30 // 43200 分钟 (30天)
+	LoginSessionTime   = time.Hour * 24 * 7 // 7天
 )
 
 //==============
